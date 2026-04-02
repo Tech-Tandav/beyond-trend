@@ -87,7 +87,7 @@ services:
     volumes:
       - production_django_media:/app/media
     ports:
-      - 127.0.0.1:8080:80
+      - 9119:80
     networks:
       - beyond_trend
     restart: always
