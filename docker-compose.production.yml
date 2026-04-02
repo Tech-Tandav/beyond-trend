@@ -1,0 +1,93 @@
+volumes:
+  production_postgres_data: {}
+  production_postgres_data_backups: {}
+  production_django_media: {}
+  production_django_staticfiles: {}
+  
+  production_redis_data: {}
+  
+networks:
+  beyond_trend:
+
+services:
+  django: &django
+    build:
+      context: .
+      dockerfile: ./compose/production/django/Dockerfile
+
+    image: beyond_trend_production_django
+    volumes:
+      - production_django_media:/app/beyond_trend/media
+    depends_on:
+      - postgres
+      - redis
+    env_file:
+      - ./.envs/.production/.django
+      - ./.envs/.production/.postgres
+    command: /start
+    networks:
+      - beyond_trend
+    restart: always
+
+  postgres:
+    build:
+      context: .
+      dockerfile: ./compose/production/postgres/Dockerfile
+    image: beyond_trend_production_postgres
+    volumes:
+      - production_postgres_data:/var/lib/postgresql/data
+      - production_postgres_data_backups:/backups
+    env_file:
+      - ./.envs/.production/.postgres
+    networks:
+      - beyond_trend
+    restart: always
+
+  redis:
+    image: docker.io/redis:6
+    
+    volumes:
+      - production_redis_data:/data
+    
+    networks:
+      - beyond_trend
+    restart: always
+
+  celeryworker:
+    <<: *django
+    image: beyond_trend_production_celeryworker
+    command: /start-celeryworker
+    networks:
+      - beyond_trend
+    restart: always
+
+  celerybeat:
+    <<: *django
+    image: beyond_trend_production_celerybeat
+    command: /start-celerybeat
+    networks:
+      - beyond_trend
+    restart: always
+
+  flower:
+    <<: *django
+    image: beyond_trend_production_flower
+    command: /start-flower
+    networks:
+      - beyond_trend
+    restart: always
+
+  nginx:
+    build:
+      context: .
+      dockerfile: ./compose/production/nginx/Dockerfile
+    image: beyond_trend_production_nginx
+    depends_on:
+      - django
+    volumes:
+      - production_django_media:/app/media
+    ports:
+      - 127.0.0.1:8080:80
+    networks:
+      - beyond_trend
+    restart: always

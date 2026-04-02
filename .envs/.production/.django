@@ -1,0 +1,44 @@
+# General
+# ------------------------------------------------------------------------------
+# DJANGO_READ_DOT_ENV_FILE=True
+DJANGO_SETTINGS_MODULE=config.settings.production
+DJANGO_SECRET_KEY=3aF5CAMV041scBodEuSBne8mj5xFEh5mPTvX2IgtKgnNTmTtV1tE15ISbbZaUP2N
+DJANGO_ADMIN_URL=super-admin
+DJANGO_ALLOWED_HOSTS=.api.beyond_trend.nicnepal.org,localhost,192.168.1.253
+CSRF_TRUSTED_ORIGINS=https://api.beyond_trend.nicnepal.org,https://app.beyond_trend.nicnepal.org,http://192.168.1.253:8080,http://localhost
+CORS_ALLOWED_ORIGINS=https://api.beyond_trend.nicnepal.org,https://app.beyond_trend.nicnepal.org,http://192.168.1.253:8080,http://localhost
+
+# Security
+# ------------------------------------------------------------------------------
+# TIP: better off using DNS, however, redirect is OK too
+DJANGO_SECURE_SSL_REDIRECT=False
+
+# Email
+# ------------------------------------------------------------------------------
+DJANGO_SERVER_EMAIL=
+
+
+# django-allauth
+# ------------------------------------------------------------------------------
+DJANGO_ACCOUNT_ALLOW_REGISTRATION=True
+
+# Gunicorn
+# ------------------------------------------------------------------------------
+WEB_CONCURRENCY=4
+
+
+# Redis
+# ------------------------------------------------------------------------------
+REDIS_URL=redis://redis:6379/0
+
+# Celery
+# ------------------------------------------------------------------------------
+
+# Flower
+CELERY_FLOWER_USER=fTDTpvdfMpUvmXxzDHYUsnBndqiqlTAX
+CELERY_FLOWER_PASSWORD=zZDATmNiSnEoUAz7cfuNmanxLrih1Xk0IzLhSAYpXAnwjQvA96UnxSTJxAa6RZeV
+
+
+# Superuser
+USERNAME=d2
+PASSWORD=dtwo@123

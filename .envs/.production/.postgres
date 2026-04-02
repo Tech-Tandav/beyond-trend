@@ -1,0 +1,7 @@
+# PostgreSQL
+# ------------------------------------------------------------------------------
+POSTGRES_HOST=postgres
+POSTGRES_PORT=5432
+POSTGRES_DB=beyond_trend
+POSTGRES_USER=nFLfOyXApLsWfcxTNGlxjCOquqateRlr
+POSTGRES_PASSWORD=kdXUTzNiEGLb6FSzlh1MOiNme7NQpDutLYYdY533xVbBaSGMSIjGkAbVu40AU9Aq

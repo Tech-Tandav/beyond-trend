@@ -1,0 +1,32 @@
+from rest_framework import serializers
+
+from beyond_trend.core.serializers import BaseModelSerializer
+
+from ..models import Customer, LoyaltySettings, LoyaltyTransaction
+
+
+class CustomerSerializer(BaseModelSerializer):
+    class Meta(BaseModelSerializer.Meta):
+        model = Customer
+        fields = ["id", "name", "email", "phone", "total_points", "is_archived", "created_at"]
+        read_only_fields = ["id", "total_points", "created_at"]
+
+
+class LoyaltyTransactionSerializer(BaseModelSerializer):
+    class Meta(BaseModelSerializer.Meta):
+        model = LoyaltyTransaction
+        fields = ["id", "customer", "points", "type", "sale", "notes", "created_at"]
+        read_only_fields = ["id", "created_at"]
+
+
+class LoyaltySettingsSerializer(BaseModelSerializer):
+    class Meta(BaseModelSerializer.Meta):
+        model = LoyaltySettings
+        fields = ["id", "points_per_100_npr", "point_value_npr", "updated_at"]
+        read_only_fields = ["id", "updated_at"]
+
+
+class RedeemPointsSerializer(serializers.Serializer):
+    customer_id = serializers.UUIDField()
+    points = serializers.IntegerField(min_value=1)
+    notes = serializers.CharField(required=False, allow_blank=True, default="")
