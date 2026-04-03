@@ -32,7 +32,14 @@ class UserCursorPagination(CustomCursorPagination):
 
 
 class CustomPagination(PageNumberPagination):
-    page_size = 10  # Number of record to shown at one page
-    # page_query_param = 'p' #default page lai change garcha
-    page_size_query_param = 'records'  # client can decide the page size
-    max_page_size = 15  # To limit the page size
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+    def get_paginated_response(self, data):
+        return Response({
+            'total': self.page.paginator.count,
+            'next': self.get_next_link(),
+            'previous': self.get_previous_link(),
+            'results': data,
+        })

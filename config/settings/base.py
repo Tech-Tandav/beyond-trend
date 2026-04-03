@@ -353,6 +353,8 @@ REST_FRAMEWORK = {
         "rest_framework.filters.SearchFilter",
         "rest_framework.filters.OrderingFilter",
     ],
+    "DEFAULT_PAGINATION_CLASS": "beyond_trend.core.pagination.CustomPagination",
+    "PAGE_SIZE": 10,
     "EXCEPTION_HANDLER": "drf_standardized_errors.handler.exception_handler",
 }
 
