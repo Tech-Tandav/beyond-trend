@@ -7,7 +7,7 @@ from beyond_trend.core.viewsets import BaseModelViewSet
 
 from beyond_trend.sales.models import Sale
 from beyond_trend.sales.api.filters import SaleFilter
-from beyond_trend.sales.api.serializers import CheckoutSerializer, SaleSerializer, ShoeCheckoutSerializer
+from beyond_trend.sales.api.serializers import CheckoutSerializer, SaleSerializer, ShoeCheckoutSerializer, ShoeSaleSerializer
 from beyond_trend.sales.api.usecases import CheckoutUseCase, ShoeCheckoutUseCase
 
 
@@ -48,6 +48,6 @@ class SaleViewSet(BaseModelViewSet):
         use_case = ShoeCheckoutUseCase(data=serializer.validated_data, staff=request.user)
         sale = use_case.execute()
         return Response(
-            SaleSerializer(sale, context=self.get_serializer_context()).data,
+            ShoeSaleSerializer(sale, context=self.get_serializer_context()).data,
             status=status.HTTP_201_CREATED,
         )

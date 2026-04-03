@@ -146,6 +146,17 @@ class ShoeCheckoutUseCase(CheckoutUseCase):
     def __init__(self, data, staff):
         self._data = data
         self._staff = staff
+        self._shoe_product = None
+
+    def is_valid(self):
+        try:
+            self._shoe_product = ShoeProduct.objects.get(barcode=self._data["bar_code"])
+        except ShoeProduct.DoesNotExist:
+            raise NotFound("Shoe product not found.")
+        if self._shoe_product.quantity < self._data["quantity"]:
+            raise ValidationError(
+                {"detail": f"Insufficient stock. Available: {self._shoe_product.quantity}, Requested: {self._data['quantity']}"}
+            )
 
     @transaction.atomic
     def execute(self):
@@ -153,27 +164,15 @@ class ShoeCheckoutUseCase(CheckoutUseCase):
         return self._factory()
 
     def _factory(self):
-        shoeproduct = (
-            ShoeProduct.objects.get(bar_code=self._data["bar_code"])  # use filter+404 below
-        )
-
-        # Validate stock availability
-        if shoeproduct.quantity < self._data["quantity"]:
-            raise ValueError(
-                f"Insufficient stock. Available: {shoeproduct.quantity}, "
-                f"Requested: {self._data['quantity']}"
-            )
-
         sale = ShoeSale.objects.create(
             staff=self._staff,
-            product=shoeproduct,           # Link product directly if FK exists
-            total_amount=self._data["selling_price"],
-            bar_code=self._data["bar_code"],
             quantity=self._data["quantity"],
-            phone_number=self._data["phone_number"],
+            selling_price=self._data["selling_price"],
+            bar_code=self._data["bar_code"],
+            phone_number=self._data.get("phone_number", ""),
         )
 
-        shoeproduct.quantity -= self._data["quantity"]
-        shoeproduct.save(update_fields=["quantity"])
+        self._shoe_product.quantity -= self._data["quantity"]
+        self._shoe_product.save(update_fields=["quantity"])
 
         return sale
