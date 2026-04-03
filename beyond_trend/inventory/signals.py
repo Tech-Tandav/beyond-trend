@@ -5,5 +5,4 @@ from beyond_trend.inventory.models import  ShoeProduct
 
 @receiver(post_save, sender=ShoeProduct)
 def shoe_product(sender, instance, created, **kwargs):
-    if instance.quantity == 0:
-        instance.delete()
+    pass

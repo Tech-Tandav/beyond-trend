@@ -153,15 +153,27 @@ class ShoeCheckoutUseCase(CheckoutUseCase):
         return self._factory()
 
     def _factory(self):
-        shoeproduct = get_object_or_404(ShoeProduct,bar_code=self._data["bar_code"])
+        shoeproduct = (
+            ShoeProduct.objects.get(bar_code=self._data["bar_code"])  # use filter+404 below
+        )
+
+        # Validate stock availability
+        if shoeproduct.quantity < self._data["quantity"]:
+            raise ValueError(
+                f"Insufficient stock. Available: {shoeproduct.quantity}, "
+                f"Requested: {self._data['quantity']}"
+            )
+
         sale = ShoeSale.objects.create(
             staff=self._staff,
+            product=shoeproduct,           # Link product directly if FK exists
             total_amount=self._data["selling_price"],
             bar_code=self._data["bar_code"],
             quantity=self._data["quantity"],
             phone_number=self._data["phone_number"],
         )
+
         shoeproduct.quantity -= self._data["quantity"]
         shoeproduct.save(update_fields=["quantity"])
-        
+
         return sale
