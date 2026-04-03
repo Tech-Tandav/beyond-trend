@@ -5,8 +5,8 @@ from rest_framework.response import Response
 
 from beyond_trend.core.viewsets import BaseModelViewSet
 
-from beyond_trend.inventory.models import Brand, Category, InventoryLog, Product, ProductVariant, Stock
-from beyond_trend.inventory.api.filters import InventoryLogFilter, ProductFilter, ProductVariantFilter, StockFilter
+from beyond_trend.inventory.models import Brand, Category, InventoryLog, Product, ProductVariant, Stock, ShoeProduct
+from beyond_trend.inventory.api.filters import InventoryLogFilter, ProductFilter, ProductVariantFilter, StockFilter, ShoeFilter
 from beyond_trend.inventory.api.serializers import (
     BrandSerializer,
     CategorySerializer,
@@ -16,6 +16,7 @@ from beyond_trend.inventory.api.serializers import (
     ProductSerializer,
     ProductVariantSerializer,
     StockSerializer,
+    ShoeSerializer
 )
 from beyond_trend.inventory.api.usecases import CheckInUseCase, CheckOutUseCase
 
@@ -115,3 +116,12 @@ class InventoryLogViewSet(BaseModelViewSet):
     filterset_class = InventoryLogFilter
     search_fields = ["notes", "variant__product__name"]
     ordering_fields = ["created_at", "action", "quantity"]
+
+
+class ShoeProductViewSet(BaseModelViewSet):
+    serializer_class = ShoeSerializer
+    queryset = ShoeProduct.objects.select_related("brand", "category").all()
+    permission_classes = [IsAuthenticated]
+    filterset_class = ShoeFilter
+    search_fields = ["name", "description", "brand__name", "category__name"]
+    ordering_fields = ["name", "created_at"]

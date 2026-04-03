@@ -1,6 +1,6 @@
 import django_filters
 
-from beyond_trend.inventory.models import InventoryLog, Product, ProductVariant, Stock
+from beyond_trend.inventory.models import InventoryLog, Product, ProductVariant, Stock, ShoeProduct
 
 
 class ProductFilter(django_filters.FilterSet):
@@ -44,3 +44,13 @@ class InventoryLogFilter(django_filters.FilterSet):
     class Meta:
         model = InventoryLog
         fields = ["variant", "action", "staff", "date_from", "date_to"]
+
+
+class ShoeFilter(django_filters.FilterSet):
+    brand = django_filters.CharFilter(field_name="brand__slug")
+    category = django_filters.CharFilter(field_name="category__slug")
+    is_published = django_filters.BooleanFilter()
+
+    class Meta:
+        model = ShoeProduct
+        fields = ["brand", "category", "is_published"]

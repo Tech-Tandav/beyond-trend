@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from beyond_trend.core.serializers import BaseModelSerializer
 
-from beyond_trend.inventory.models import Brand, Category, InventoryLog, Product, ProductVariant, Stock
+from beyond_trend.inventory.models import Brand, Category, InventoryLog, Product, ProductVariant, Stock, ShoeProduct
 
 
 class BrandSerializer(BaseModelSerializer):
@@ -92,3 +92,20 @@ class CheckOutSerializer(serializers.Serializer):
     variant_id = serializers.UUIDField()
     quantity = serializers.IntegerField(min_value=1)
     notes = serializers.CharField(required=False, allow_blank=True, default="")
+
+
+class ShoeSerializer(BaseModelSerializer):
+    class Meta(BaseModelSerializer.Meta):
+        model = ShoeProduct
+        fields = [
+            "id",
+            "name",
+            "slug",
+            "brand_name",
+            "description",
+            "image",
+            "is_published",
+            "is_archived",
+            "created_at",
+        ]
+        read_only_fields = ["id", "slug", "created_at"]

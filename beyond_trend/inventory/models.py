@@ -135,3 +135,22 @@ class InventoryLog(BaseModel):
 
     def __str__(self):
         return f"{self.get_action_display()} | {self.variant} | {self.quantity}"
+
+
+
+
+class ShoeProduct(BaseModelWithSlug):
+    brand_name = models.CharField(_("Brand Name"), max_length=255)
+    barcode = models.CharField(_("Barcode"), max_length=100, unique=True, blank=True)
+    selling_price = models.DecimalField(_("Selling Price"), max_digits=10, decimal_places=2)
+    size = models.CharField(_("Size"), max_length=20)
+    color = models.CharField(_("Color"), max_length=50)
+    description = models.TextField(_("Description"), blank=True)
+    quantity = models.PositiveIntegerField(_("Quantity"), default=0)
+    image = models.ImageField(_("Image"), upload_to="products/", null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return self.brand_name

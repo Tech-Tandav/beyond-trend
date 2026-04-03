@@ -8,6 +8,7 @@ from beyond_trend.inventory.api.views import (
     ProductVariantViewSet,
     ProductViewSet,
     StockViewSet,
+    ShoeProductViewSet
 )
 
 router = DefaultRouter() if settings.DEBUG else SimpleRouter()
@@ -18,6 +19,7 @@ router.register("products", ProductViewSet)
 router.register("variants", ProductVariantViewSet)
 router.register("stocks", StockViewSet)
 router.register("logs", InventoryLogViewSet)
+router.register("shoe", ShoeProductViewSet)
 
 app_name = "inventory"
 
