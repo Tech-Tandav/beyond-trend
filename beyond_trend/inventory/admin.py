@@ -65,6 +65,7 @@ class InventoryLogAdmin(BaseModelAdmin):
 
 @admin.register(ShoeProduct)
 class ShoeProductAdmin(BasePublishModelAdmin):
-    list_display = ["name", "brand", "category", "is_published", "is_archived", "created_at"]
-    list_filter = ["brand", "category", "is_published", "is_archived"]
-    search_fields = ["name", "id"]
+    list_display = [ "brand_name", "size", "color", "quantity", "selling_price", "is_archived", "created_at"]
+    list_filter = [ "is_archived"]
+    search_fields = ["brand_name", "barcode", "id"]
+    readonly_fields = ["barcode"]
