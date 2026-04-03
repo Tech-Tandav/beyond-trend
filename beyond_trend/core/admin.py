@@ -82,8 +82,8 @@ class BasePublishModelAdmin(BaseModelAdmin, PublishMixin):
         'hide'
     ]
     readonly_fields = (
-        'created',
-        'updated'
+        'created_at',
+        'updated_at'
     )
     list_filter = (
         'is_archived',

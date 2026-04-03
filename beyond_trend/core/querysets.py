@@ -10,14 +10,14 @@ class ArchiveMixin:
     def archive(self):
         kwargs = {
             'is_archived': True,
-            'updated': timezone.now()
+            'updated_at': timezone.now()
         }
         self.update(**kwargs)
 
     def restore(self):
         kwargs = {
             'is_archived': False,
-            'updated': timezone.now()
+            'updated_at': timezone.now()
         }
         self.update(**kwargs)
 
@@ -33,19 +33,19 @@ class PublishMixin:
     def publish(self):
         kwargs = {
             'is_published': True,
-            'updated': timezone.now()
+            'updated_at': timezone.now()
         }
         self.update(**kwargs)
 
     def hide(self):
         kwargs = {
             'is_published': False,
-            'updated': timezone.now()
+            'updated_at': timezone.now()
         }
         self.update(**kwargs)
 
     def published(self):
-        return self.filter(is_published=False)
+        return self.filter(is_published=True)
 
 
 class BaseModelQuerySet(models.QuerySet, ArchiveMixin, PublishMixin):

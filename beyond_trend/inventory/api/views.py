@@ -1,4 +1,3 @@
-from django.db import transaction
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -17,6 +16,7 @@ from .serializers import (
     ProductVariantSerializer,
     StockSerializer,
 )
+from .usecases import CheckInUseCase, CheckOutUseCase
 
 
 class BrandViewSet(BaseModelViewSet):
@@ -63,97 +63,34 @@ class ProductVariantViewSet(BaseModelViewSet):
         return qs
 
     @action(detail=False, methods=["post"], url_path="check-in")
-    @transaction.atomic
     def check_in(self, request):
         """Add stock for a variant (Check-In)."""
         serializer = CheckInSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
 
-        variant_id = serializer.validated_data["variant_id"]
-        quantity = serializer.validated_data["quantity"]
-        notes = serializer.validated_data.get("notes", "")
-
-        try:
-            variant = ProductVariant.objects.get(id=variant_id)
-        except ProductVariant.DoesNotExist:
-            return Response(
-                {"detail": "Variant not found."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-
-        stock, _ = Stock.objects.get_or_create(variant=variant)
-        stock.quantity += quantity
-        stock.save(update_fields=["quantity"])
-
-        InventoryLog.objects.create(
-            variant=variant,
-            action=InventoryLog.CHECK_IN,
-            quantity=quantity,
+        use_case = CheckInUseCase(
+            variant_id=data["variant_id"],
+            quantity=data["quantity"],
+            notes=data.get("notes", ""),
             staff=request.user,
-            notes=notes,
         )
-
-        return Response(
-            {
-                "detail": "Stock checked in successfully.",
-                "variant": str(variant),
-                "new_quantity": stock.quantity,
-            },
-            status=status.HTTP_200_OK,
-        )
+        return Response(use_case.execute(), status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["post"], url_path="check-out")
-    @transaction.atomic
     def check_out(self, request):
         """Remove stock for a variant (manual inventory check-out)."""
         serializer = CheckOutSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
 
-        variant_id = serializer.validated_data["variant_id"]
-        quantity = serializer.validated_data["quantity"]
-        notes = serializer.validated_data.get("notes", "")
-
-        try:
-            variant = ProductVariant.objects.get(id=variant_id)
-        except ProductVariant.DoesNotExist:
-            return Response(
-                {"detail": "Variant not found."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-
-        try:
-            stock = Stock.objects.get(variant=variant)
-        except Stock.DoesNotExist:
-            return Response(
-                {"detail": "No stock record for this variant."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        if stock.quantity < quantity:
-            return Response(
-                {"detail": f"Insufficient stock. Available: {stock.quantity}"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        stock.quantity -= quantity
-        stock.save(update_fields=["quantity"])
-
-        InventoryLog.objects.create(
-            variant=variant,
-            action=InventoryLog.CHECK_OUT,
-            quantity=-quantity,
+        use_case = CheckOutUseCase(
+            variant_id=data["variant_id"],
+            quantity=data["quantity"],
+            notes=data.get("notes", ""),
             staff=request.user,
-            notes=notes,
         )
-
-        return Response(
-            {
-                "detail": "Stock checked out successfully.",
-                "variant": str(variant),
-                "new_quantity": stock.quantity,
-            },
-            status=status.HTTP_200_OK,
-        )
+        return Response(use_case.execute(), status=status.HTTP_200_OK)
 
 
 class StockViewSet(BaseModelViewSet):

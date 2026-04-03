@@ -1,4 +1,3 @@
-from django.db import transaction
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -13,6 +12,7 @@ from .serializers import (
     LoyaltyTransactionSerializer,
     RedeemPointsSerializer,
 )
+from .usecases import RedeemPointsUseCase
 
 
 class CustomerViewSet(BaseModelViewSet):
@@ -35,55 +35,18 @@ class CustomerViewSet(BaseModelViewSet):
         return Response(serializer.data)
 
     @action(detail=False, methods=["post"], url_path="redeem")
-    @transaction.atomic
     def redeem(self, request):
         """Redeem loyalty points for a customer."""
         serializer = RedeemPointsSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
 
-        customer_id = serializer.validated_data["customer_id"]
-        points = serializer.validated_data["points"]
-        notes = serializer.validated_data.get("notes", "")
-
-        try:
-            customer = Customer.objects.get(id=customer_id)
-        except Customer.DoesNotExist:
-            return Response({"detail": "Customer not found."}, status=status.HTTP_404_NOT_FOUND)
-
-        if customer.total_points < points:
-            return Response(
-                {"detail": f"Insufficient points. Available: {customer.total_points}"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        settings_obj = LoyaltySettings.objects.first()
-        if not settings_obj:
-            return Response(
-                {"detail": "Loyalty settings not configured."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        discount = points * settings_obj.point_value_npr
-
-        customer.total_points -= points
-        customer.save(update_fields=["total_points"])
-
-        LoyaltyTransaction.objects.create(
-            customer=customer,
-            points=-points,
-            type=LoyaltyTransaction.REDEEMED,
-            notes=notes,
+        use_case = RedeemPointsUseCase(
+            customer_id=data["customer_id"],
+            points=data["points"],
+            notes=data.get("notes", ""),
         )
-
-        return Response(
-            {
-                "detail": "Points redeemed successfully.",
-                "points_redeemed": points,
-                "discount_amount": float(discount),
-                "remaining_points": customer.total_points,
-            },
-            status=status.HTTP_200_OK,
-        )
+        return Response(use_case.execute(), status=status.HTTP_200_OK)
 
 
 class LoyaltyTransactionViewSet(BaseModelViewSet):

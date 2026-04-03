@@ -1,4 +1,4 @@
-import datetime, os, random, string, uuid, jwt, environ, requests, json, math
+import datetime, os, random, string, uuid, environ, requests, json, math
 from io import BytesIO
 from datetime import datetime
 from PIL import Image

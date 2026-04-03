@@ -89,6 +89,10 @@ THIRD_PARTY_APPS = [
 LOCAL_APPS = [
     "beyond_trend.users",
     # Your stuff: custom apps go here
+    "beyond_trend.inventory",
+    "beyond_trend.loyalty",
+    "beyond_trend.orders",
+    "beyond_trend.sales",
 ]
 # https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS

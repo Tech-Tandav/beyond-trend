@@ -59,8 +59,8 @@ class BasePublishModel(BaseModel):
                 'non_field_errors': _('Failed - it is already published.')
             })
         self.is_published = True
-        self.updated = timezone.now()
-        self.save(update_fields=['is_published', 'updated'])
+        self.updated_at = timezone.now()
+        self.save(update_fields=['is_published', 'updated_at'])
 
     def hide(self):
         if not self.is_published:
@@ -68,8 +68,8 @@ class BasePublishModel(BaseModel):
                 'non_field_errors': _('Failed - it is already hidden.')
             })
         self.is_published = False
-        self.updated = timezone.now()
-        self.save(update_fields=['is_published', 'updated'])
+        self.updated_at = timezone.now()
+        self.save(update_fields=['is_published', 'updated_at'])
 
 
 class BaseModelWithSlug(BaseModel):
