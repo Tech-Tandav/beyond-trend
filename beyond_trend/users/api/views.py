@@ -6,13 +6,16 @@ from rest_framework.mixins import UpdateModelMixin
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 from rest_framework.permissions import AllowAny
-from rest_framework.authtoken.models import Token
 from rest_framework.generics import CreateAPIView
-from rest_framework.authtoken.views import ObtainAuthToken
+from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from beyond_trend.users.models import User
-
-from beyond_trend.users.api.serializers import UserSerializer
+from beyond_trend.users.api.serializers import (
+    UserSerializer,
+    RegisterSerializer,
+    CustomTokenObtainPairSerializer,
+)
 
 
 class UserViewSet(RetrieveModelMixin, ListModelMixin, UpdateModelMixin, GenericViewSet):
@@ -31,20 +34,29 @@ class UserViewSet(RetrieveModelMixin, ListModelMixin, UpdateModelMixin, GenericV
 
 
 class UserRegisterationView(CreateAPIView):
-    serializer_class = UserSerializer
+    serializer_class = RegisterSerializer
     permission_classes = [AllowAny]
-        
-        
-class UserLoginTokenView(ObtainAuthToken):
+
+    def create(self, request, *_args, **_kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        refresh = RefreshToken.for_user(user)
+        return Response(
+            {
+                "user": {
+                    "id": user.id,
+                    "username": user.username,
+                    "email": user.email,
+                    "name": user.name,
+                },
+                "access": str(refresh.access_token),
+                "refresh": str(refresh),
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class UserLoginView(TokenObtainPairView):
     permission_classes = [AllowAny]
-    
-    def post(self, request, *args, **kwargs):
-        response = super().post(request, *args, **kwargs)
-        user = Token.objects.get(key=response.data["token"]).user
-        response.data["user"] = {
-            "id": user.id,
-            "email": user.email,
-            "username": user.username,
-            "is_staff": user.is_staff,
-        }
-        return response
+    serializer_class = CustomTokenObtainPairSerializer
