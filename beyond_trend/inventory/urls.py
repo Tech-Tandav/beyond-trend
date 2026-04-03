@@ -1,6 +1,8 @@
 from django.conf import settings
+from django.urls import path
 from rest_framework.routers import DefaultRouter, SimpleRouter
 
+from beyond_trend.inventory.api.analytics import InventoryAnalyticsView
 from beyond_trend.inventory.api.views import (
     BrandViewSet,
     CategoryViewSet,
@@ -23,4 +25,7 @@ router.register("shoe", ShoeProductViewSet)
 
 app_name = "inventory"
 
-urlpatterns = router.urls
+urlpatterns = [
+    path("analytics/", InventoryAnalyticsView.as_view(), name="inventory-analytics"),
+]
+urlpatterns += router.urls
