@@ -123,5 +123,6 @@ class ShoeProductViewSet(BaseModelViewSet):
     queryset = ShoeProduct.objects.all()
     permission_classes = [IsAuthenticated]
     filterset_class = ShoeFilter
+    lookup_field = "barcode"
     search_fields = ["brand_name", "description", "color", "size", "barcode"]
     ordering_fields = ["brand_name", "selling_price", "created_at"]
