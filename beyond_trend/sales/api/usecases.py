@@ -1,11 +1,14 @@
 from django.db import transaction
+from django.shortcuts import get_object_or_404
+
 from rest_framework.exceptions import NotFound, ValidationError
 
 from beyond_trend.core.usecases import BaseUseCase
 from beyond_trend.inventory.models import InventoryLog, ProductVariant, Stock
 from beyond_trend.loyalty.models import Customer, LoyaltySettings, LoyaltyTransaction
 
-from beyond_trend.sales.models import Sale, SaleItem
+from beyond_trend.sales.models import Sale, SaleItem, ShoeSale
+from beyond_trend.inventory.models import ShoeProduct
 
 
 class CheckoutUseCase(BaseUseCase):
@@ -136,4 +139,29 @@ class CheckoutUseCase(BaseUseCase):
             sale.loyalty_points_earned = points_earned
             sale.save(update_fields=["loyalty_points_earned"])
 
+        return sale
+
+
+class ShoeCheckoutUseCase(CheckoutUseCase):
+    def __init__(self, data, staff):
+        self._data = data
+        self._staff = staff
+
+    @transaction.atomic
+    def execute(self):
+        self.is_valid()
+        return self._factory()
+
+    def _factory(self):
+        shoeproduct = get_object_or_404(ShoeProduct,bar_code=self._data["bar_code"])
+        sale = ShoeSale.objects.create(
+            staff=self._staff,
+            total_amount=self._data["selling_price"],
+            bar_code=self._data["bar_code"],
+            quantity=self._data["quantity"],
+            phone_number=self._data["phone_number"],
+        )
+        shoeproduct.quantity -= self._data["quantity"]
+        shoeproduct.save(update_fields=["quantity"])
+        
         return sale

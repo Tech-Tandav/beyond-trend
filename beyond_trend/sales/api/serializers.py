@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from beyond_trend.core.serializers import BaseModelSerializer
 
-from beyond_trend.sales.models import Sale, SaleItem
+from ..models import Sale, SaleItem
 
 
 class SaleItemSerializer(BaseModelSerializer):
@@ -54,8 +54,20 @@ class CheckoutSerializer(serializers.Serializer):
     customer_id = serializers.UUIDField(required=False, allow_null=True)
     loyalty_points_used = serializers.IntegerField(min_value=0, default=0)
     notes = serializers.CharField(required=False, allow_blank=True, default="")
+    phone_number = serializers.CharField(max_length=20, required=False, allow_blank=True)
 
     def validate_items(self, value):
+        if not value:
+            raise serializers.ValidationError("At least one item is required.")
+        return value
+
+
+class ShoeCheckoutSerializer(serializers.Serializer):
+    quantity = serializers.IntegerField(min_value=1)
+    selling_price = serializers.DecimalField(max_digits=10, decimal_places=2)
+    bar_code = serializers.CharField(max_length=255)
+    
+    def validate_quantity(self, value):
         if not value:
             raise serializers.ValidationError("At least one item is required.")
         return value

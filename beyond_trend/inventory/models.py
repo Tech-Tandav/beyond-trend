@@ -137,8 +137,6 @@ class InventoryLog(BaseModel):
         return f"{self.get_action_display()} | {self.variant} | {self.quantity}"
 
 
-
-
 class ShoeProduct(BaseModelWithSlug):
     brand_name = models.CharField(_("Brand Name"), max_length=255)
     barcode = models.CharField(_("Barcode"), max_length=100, unique=True, blank=True)
