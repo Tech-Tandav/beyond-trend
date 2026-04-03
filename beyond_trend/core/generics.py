@@ -3,8 +3,8 @@ from drf_spectacular.utils import extend_schema
 from rest_framework import generics, status
 from rest_framework.response import Response
 
-from .mixins import LoggingErrorsMixin
-from .serializers import MessageResponseSerializer
+from beyond_trend.core.mixins import LoggingErrorsMixin
+from beyond_trend.core.serializers import MessageResponseSerializer
 
 
 class GenericAPIView(LoggingErrorsMixin, generics.GenericAPIView):

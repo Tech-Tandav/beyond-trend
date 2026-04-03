@@ -5,32 +5,20 @@ from rest_framework.response import Response
 
 from beyond_trend.core.viewsets import BaseModelViewSet
 
-from ..models import Sale
-from .serializers import CheckoutSerializer, SaleSerializer
-from .usecases import CheckoutUseCase
+from beyond_trend.sales.models import Sale
+from beyond_trend.sales.api.filters import SaleFilter
+from beyond_trend.sales.api.serializers import CheckoutSerializer, SaleSerializer
+from beyond_trend.sales.api.usecases import CheckoutUseCase
 
 
 class SaleViewSet(BaseModelViewSet):
     serializer_class = SaleSerializer
     queryset = Sale.objects.select_related("staff", "customer").prefetch_related("items").all()
     permission_classes = [IsAuthenticated]
-    http_method_names = ["get", "head", "options", "post"]  # sales cannot be edited/deleted
-
-    def get_queryset(self):
-        qs = super().get_queryset()
-        customer_id = self.request.query_params.get("customer")
-        staff_id = self.request.query_params.get("staff")
-        date_from = self.request.query_params.get("date_from")
-        date_to = self.request.query_params.get("date_to")
-        if customer_id:
-            qs = qs.filter(customer__id=customer_id)
-        if staff_id:
-            qs = qs.filter(staff__id=staff_id)
-        if date_from:
-            qs = qs.filter(created_at__date__gte=date_from)
-        if date_to:
-            qs = qs.filter(created_at__date__lte=date_to)
-        return qs
+    http_method_names = ["get", "head", "options", "post"]
+    filterset_class = SaleFilter
+    search_fields = ["customer__name", "customer__email", "staff__name"]
+    ordering_fields = ["created_at", "total_amount", "subtotal"]
 
     @action(detail=False, methods=["post"], url_path="checkout")
     def checkout(self, request):

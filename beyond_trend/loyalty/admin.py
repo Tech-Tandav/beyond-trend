@@ -2,7 +2,7 @@ from django.contrib import admin
 
 from beyond_trend.core.admin import BaseModelAdmin
 
-from .models import Customer, LoyaltySettings, LoyaltyTransaction
+from beyond_trend.loyalty.models import Customer, LoyaltySettings, LoyaltyTransaction
 
 
 @admin.register(Customer)

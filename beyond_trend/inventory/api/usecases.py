@@ -3,7 +3,7 @@ from rest_framework.exceptions import NotFound, ValidationError
 
 from beyond_trend.core.usecases import BaseUseCase
 
-from ..models import InventoryLog, ProductVariant, Stock
+from beyond_trend.inventory.models import InventoryLog, ProductVariant, Stock
 
 
 class CheckInUseCase(BaseUseCase):

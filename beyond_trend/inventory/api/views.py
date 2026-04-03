@@ -5,8 +5,9 @@ from rest_framework.response import Response
 
 from beyond_trend.core.viewsets import BaseModelViewSet
 
-from ..models import Brand, Category, InventoryLog, Product, ProductVariant, Stock
-from .serializers import (
+from beyond_trend.inventory.models import Brand, Category, InventoryLog, Product, ProductVariant, Stock
+from beyond_trend.inventory.api.filters import InventoryLogFilter, ProductFilter, ProductVariantFilter, StockFilter
+from beyond_trend.inventory.api.serializers import (
     BrandSerializer,
     CategorySerializer,
     CheckInSerializer,
@@ -16,51 +17,41 @@ from .serializers import (
     ProductVariantSerializer,
     StockSerializer,
 )
-from .usecases import CheckInUseCase, CheckOutUseCase
+from beyond_trend.inventory.api.usecases import CheckInUseCase, CheckOutUseCase
 
 
 class BrandViewSet(BaseModelViewSet):
     serializer_class = BrandSerializer
     queryset = Brand.objects.all()
     permission_classes = [IsAuthenticated]
+    search_fields = ["name"]
+    ordering_fields = ["name"]
 
 
 class CategoryViewSet(BaseModelViewSet):
     serializer_class = CategorySerializer
     queryset = Category.objects.all()
     permission_classes = [IsAuthenticated]
+    search_fields = ["name"]
+    ordering_fields = ["name"]
 
 
 class ProductViewSet(BaseModelViewSet):
     serializer_class = ProductSerializer
     queryset = Product.objects.select_related("brand", "category").all()
     permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        qs = super().get_queryset()
-        brand = self.request.query_params.get("brand")
-        category = self.request.query_params.get("category")
-        if brand:
-            qs = qs.filter(brand__slug=brand)
-        if category:
-            qs = qs.filter(category__slug=category)
-        return qs
+    filterset_class = ProductFilter
+    search_fields = ["name", "description", "brand__name", "category__name"]
+    ordering_fields = ["name", "created_at"]
 
 
 class ProductVariantViewSet(BaseModelViewSet):
     serializer_class = ProductVariantSerializer
     queryset = ProductVariant.objects.select_related("product").all()
     permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        qs = super().get_queryset()
-        product_id = self.request.query_params.get("product")
-        barcode = self.request.query_params.get("barcode")
-        if product_id:
-            qs = qs.filter(product__id=product_id)
-        if barcode:
-            qs = qs.filter(barcode=barcode)
-        return qs
+    filterset_class = ProductVariantFilter
+    search_fields = ["barcode", "size", "color", "product__name"]
+    ordering_fields = ["size", "color", "selling_price", "cost_price"]
 
     @action(detail=False, methods=["post"], url_path="check-in")
     def check_in(self, request):
@@ -97,7 +88,9 @@ class StockViewSet(BaseModelViewSet):
     serializer_class = StockSerializer
     queryset = Stock.objects.select_related("variant__product").all()
     permission_classes = [IsAuthenticated]
-    http_method_names = ["get", "patch", "head", "options"]  # no create/delete via API
+    http_method_names = ["get", "patch", "head", "options"]
+    filterset_class = StockFilter
+    ordering_fields = ["quantity", "variant__product__name"]
 
     @action(detail=False, methods=["get"], url_path="low-stock")
     def low_stock(self, request):
@@ -118,14 +111,7 @@ class InventoryLogViewSet(BaseModelViewSet):
     serializer_class = InventoryLogSerializer
     queryset = InventoryLog.objects.select_related("variant__product", "staff").all()
     permission_classes = [IsAuthenticated]
-    http_method_names = ["get", "head", "options"]  # logs are read-only via API
-
-    def get_queryset(self):
-        qs = super().get_queryset()
-        variant_id = self.request.query_params.get("variant")
-        action_filter = self.request.query_params.get("action")
-        if variant_id:
-            qs = qs.filter(variant__id=variant_id)
-        if action_filter:
-            qs = qs.filter(action=action_filter)
-        return qs
+    http_method_names = ["get", "head", "options"]
+    filterset_class = InventoryLogFilter
+    search_fields = ["notes", "variant__product__name"]
+    ordering_fields = ["created_at", "action", "quantity"]

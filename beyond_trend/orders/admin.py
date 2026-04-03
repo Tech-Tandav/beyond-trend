@@ -2,7 +2,7 @@ from django.contrib import admin
 
 from beyond_trend.core.admin import BaseModelAdmin
 
-from .models import Order, OrderItem, PreOrder
+from beyond_trend.orders.models import Order, OrderItem, PreOrder
 
 
 class OrderItemInline(admin.TabularInline):

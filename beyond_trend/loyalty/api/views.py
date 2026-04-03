@@ -5,27 +5,24 @@ from rest_framework.response import Response
 
 from beyond_trend.core.viewsets import BaseModelViewSet
 
-from ..models import Customer, LoyaltySettings, LoyaltyTransaction
-from .serializers import (
+from beyond_trend.loyalty.models import Customer, LoyaltySettings, LoyaltyTransaction
+from beyond_trend.loyalty.api.filters import CustomerFilter, LoyaltyTransactionFilter
+from beyond_trend.loyalty.api.serializers import (
     CustomerSerializer,
     LoyaltySettingsSerializer,
     LoyaltyTransactionSerializer,
     RedeemPointsSerializer,
 )
-from .usecases import RedeemPointsUseCase
+from beyond_trend.loyalty.api.usecases import RedeemPointsUseCase
 
 
 class CustomerViewSet(BaseModelViewSet):
     serializer_class = CustomerSerializer
     queryset = Customer.objects.all()
     permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        qs = super().get_queryset()
-        search = self.request.query_params.get("search")
-        if search:
-            qs = qs.filter(name__icontains=search) | qs.filter(email__icontains=search) | qs.filter(phone__icontains=search)
-        return qs
+    filterset_class = CustomerFilter
+    search_fields = ["name", "email", "phone"]
+    ordering_fields = ["name", "total_points", "created_at"]
 
     @action(detail=True, methods=["get"], url_path="transactions")
     def transactions(self, request, pk=None):
@@ -53,7 +50,9 @@ class LoyaltyTransactionViewSet(BaseModelViewSet):
     serializer_class = LoyaltyTransactionSerializer
     queryset = LoyaltyTransaction.objects.select_related("customer", "sale").all()
     permission_classes = [IsAuthenticated]
-    http_method_names = ["get", "head", "options"]  # transactions are read-only via API
+    http_method_names = ["get", "head", "options"]
+    filterset_class = LoyaltyTransactionFilter
+    ordering_fields = ["created_at", "points", "type"]
 
 
 class LoyaltySettingsViewSet(BaseModelViewSet):

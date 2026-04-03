@@ -5,7 +5,7 @@ from django.core.files import File
 from django.core.files.storage import FileSystemStorage
 from django.core.files.utils import validate_file_name
 
-from .utils import reduce_image_size
+from beyond_trend.core.utils import reduce_image_size
 
 
 class OverwriteStorage(FileSystemStorage):

@@ -1,7 +1,7 @@
 from django.utils.translation import gettext_lazy as _
 from rest_framework.fields import CharField, DecimalField
 
-from . import validators
+from beyond_trend.core import validators
 
 
 class PhoneNumberField(CharField):

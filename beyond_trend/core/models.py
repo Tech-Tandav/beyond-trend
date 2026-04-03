@@ -6,8 +6,8 @@ from django.utils import timezone
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 
-from . import managers
-from .utils import generate_random_string
+from beyond_trend.core import managers
+from beyond_trend.core.utils import generate_random_string
 
 
 class BaseModel(models.Model):

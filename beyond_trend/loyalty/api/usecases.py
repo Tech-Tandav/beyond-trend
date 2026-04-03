@@ -3,7 +3,7 @@ from rest_framework.exceptions import NotFound, ValidationError
 
 from beyond_trend.core.usecases import BaseUseCase
 
-from ..models import Customer, LoyaltySettings, LoyaltyTransaction
+from beyond_trend.loyalty.models import Customer, LoyaltySettings, LoyaltyTransaction
 
 
 class RedeemPointsUseCase(BaseUseCase):

@@ -12,7 +12,7 @@ from rest_framework.authtoken.views import ObtainAuthToken
 
 from beyond_trend.users.models import User
 
-from .serializers import UserSerializer
+from beyond_trend.users.api.serializers import UserSerializer
 
 
 class UserViewSet(RetrieveModelMixin, ListModelMixin, UpdateModelMixin, GenericViewSet):

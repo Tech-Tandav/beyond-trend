@@ -2,7 +2,7 @@ from django.contrib import admin
 
 from beyond_trend.core.admin import BaseModelAdmin, BasePublishModelAdmin
 
-from .models import Brand, Category, InventoryLog, Product, ProductVariant, Stock
+from beyond_trend.inventory.models import Brand, Category, InventoryLog, Product, ProductVariant, Stock
 
 
 @admin.register(Brand)

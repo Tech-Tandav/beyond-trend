@@ -5,14 +5,15 @@ from rest_framework.response import Response
 
 from beyond_trend.core.viewsets import BaseModelViewSet
 
-from ..models import Order, PreOrder
-from .serializers import (
+from beyond_trend.orders.models import Order, PreOrder
+from beyond_trend.orders.api.filters import OrderFilter, PreOrderFilter
+from beyond_trend.orders.api.serializers import (
     CreateOrderSerializer,
     OrderSerializer,
     PreOrderSerializer,
     UpdateOrderStatusSerializer,
 )
-from .usecases import (
+from beyond_trend.orders.api.usecases import (
     CreateOrderUseCase,
     FulfillPreOrderUseCase,
     NotifyPreOrderUseCase,
@@ -24,13 +25,9 @@ class OrderViewSet(BaseModelViewSet):
     serializer_class = OrderSerializer
     queryset = Order.objects.prefetch_related("items").all()
     permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        qs = super().get_queryset()
-        order_status = self.request.query_params.get("status")
-        if order_status:
-            qs = qs.filter(status=order_status)
-        return qs
+    filterset_class = OrderFilter
+    search_fields = ["customer_name", "email", "phone"]
+    ordering_fields = ["created_at", "total_amount", "status"]
 
     def create(self, request, *args, **kwargs):
         serializer = CreateOrderSerializer(data=request.data)
@@ -58,13 +55,9 @@ class PreOrderViewSet(BaseModelViewSet):
     serializer_class = PreOrderSerializer
     queryset = PreOrder.objects.all()
     permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        qs = super().get_queryset()
-        order_status = self.request.query_params.get("status")
-        if order_status:
-            qs = qs.filter(status=order_status)
-        return qs
+    filterset_class = PreOrderFilter
+    search_fields = ["customer_name", "email", "phone", "product_name", "brand"]
+    ordering_fields = ["created_at", "status"]
 
     @action(detail=True, methods=["patch"], url_path="notify")
     def notify(self, request, pk=None):

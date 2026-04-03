@@ -5,7 +5,7 @@ from beyond_trend.core.usecases import BaseUseCase
 from beyond_trend.inventory.models import InventoryLog, ProductVariant, Stock
 from beyond_trend.loyalty.models import Customer, LoyaltySettings, LoyaltyTransaction
 
-from ..models import Sale, SaleItem
+from beyond_trend.sales.models import Sale, SaleItem
 
 
 class CheckoutUseCase(BaseUseCase):

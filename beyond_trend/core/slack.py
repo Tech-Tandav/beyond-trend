@@ -1,7 +1,7 @@
 import json
 from urllib import request
 
-from .exceptions import SlackSendFailed
+from beyond_trend.core.exceptions import SlackSendFailed
 
 
 class Slack:

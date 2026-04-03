@@ -3,7 +3,7 @@ from django.core.validators import _lazy_re_compile
 from django.utils.deconstruct import deconstructible
 from django.utils.translation import gettext_lazy as _
 
-from .utils import is_email_disposable
+from beyond_trend.core.utils import is_email_disposable
 
 
 @deconstructible

@@ -5,7 +5,7 @@ from beyond_trend.core.usecases import BaseUseCase
 from beyond_trend.inventory.models import ProductVariant
 from beyond_trend.loyalty.models import Customer
 
-from ..models import Order, OrderItem, PreOrder
+from beyond_trend.orders.models import Order, OrderItem, PreOrder
 
 
 class CreateOrderUseCase(BaseUseCase):

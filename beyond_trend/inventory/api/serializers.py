@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from beyond_trend.core.serializers import BaseModelSerializer
 
-from ..models import Brand, Category, InventoryLog, Product, ProductVariant, Stock
+from beyond_trend.inventory.models import Brand, Category, InventoryLog, Product, ProductVariant, Stock
 
 
 class BrandSerializer(BaseModelSerializer):

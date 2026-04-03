@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from beyond_trend.core.serializers import BaseModelSerializer
 
-from ..models import Customer, LoyaltySettings, LoyaltyTransaction
+from beyond_trend.loyalty.models import Customer, LoyaltySettings, LoyaltyTransaction
 
 
 class CustomerSerializer(BaseModelSerializer):

@@ -2,7 +2,7 @@ from django.contrib import admin
 
 from beyond_trend.core.admin import BaseModelAdmin
 
-from .models import Sale, SaleItem
+from beyond_trend.sales.models import Sale, SaleItem
 
 
 class SaleItemInline(admin.TabularInline):

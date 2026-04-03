@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from beyond_trend.core.serializers import BaseModelSerializer
 
-from ..models import Sale, SaleItem
+from beyond_trend.sales.models import Sale, SaleItem
 
 
 class SaleItemSerializer(BaseModelSerializer):

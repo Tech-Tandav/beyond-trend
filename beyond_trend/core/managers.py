@@ -1,6 +1,6 @@
 from django.db import models
 
-from . import querysets
+from beyond_trend.core import querysets
 
 
 class ArchiveMixin:

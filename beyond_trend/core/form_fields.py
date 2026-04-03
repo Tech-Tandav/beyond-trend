@@ -1,6 +1,6 @@
 from django.forms import CharField
 
-from . import validators
+from beyond_trend.core import validators
 
 
 class PhoneNumberField(CharField):
