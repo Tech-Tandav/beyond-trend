@@ -99,13 +99,16 @@ class ShoeSerializer(BaseModelSerializer):
         model = ShoeProduct
         fields = [
             "id",
-            "name",
             "slug",
             "brand_name",
+            "barcode",
+            "selling_price",
+            "size",
+            "color",
             "description",
+            "quantity",
             "image",
-            "is_published",
             "is_archived",
             "created_at",
         ]
-        read_only_fields = ["id", "slug", "created_at"]
+        read_only_fields = ["id", "slug", "barcode", "created_at"]

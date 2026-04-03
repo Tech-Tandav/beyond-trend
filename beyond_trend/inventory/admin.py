@@ -2,7 +2,7 @@ from django.contrib import admin
 
 from beyond_trend.core.admin import BaseModelAdmin, BasePublishModelAdmin
 
-from beyond_trend.inventory.models import Brand, Category, InventoryLog, Product, ProductVariant, Stock
+from beyond_trend.inventory.models import Brand, Category, InventoryLog, Product, ProductVariant, Stock, ShoeProduct
 
 
 @admin.register(Brand)
@@ -61,3 +61,10 @@ class InventoryLogAdmin(BaseModelAdmin):
     list_display = ["variant", "action", "quantity", "staff", "created_at"]
     list_filter = ["action", "is_archived"]
     search_fields = ["variant__product__name", "variant__barcode", "id"]
+
+
+@admin.register(ShoeProduct)
+class ShoeProductAdmin(BasePublishModelAdmin):
+    list_display = ["name", "brand", "category", "is_published", "is_archived", "created_at"]
+    list_filter = ["brand", "category", "is_published", "is_archived"]
+    search_fields = ["name", "id"]

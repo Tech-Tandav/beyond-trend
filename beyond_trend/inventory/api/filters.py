@@ -47,10 +47,12 @@ class InventoryLogFilter(django_filters.FilterSet):
 
 
 class ShoeFilter(django_filters.FilterSet):
-    brand = django_filters.CharFilter(field_name="brand__slug")
-    category = django_filters.CharFilter(field_name="category__slug")
-    is_published = django_filters.BooleanFilter()
+    brand_name = django_filters.CharFilter(lookup_expr="icontains")
+    color = django_filters.CharFilter(lookup_expr="icontains")
+    size = django_filters.CharFilter(lookup_expr="iexact")
+    min_price = django_filters.NumberFilter(field_name="selling_price", lookup_expr="gte")
+    max_price = django_filters.NumberFilter(field_name="selling_price", lookup_expr="lte")
 
     class Meta:
         model = ShoeProduct
-        fields = ["brand", "category", "is_published"]
+        fields = ["brand_name", "color", "size", "min_price", "max_price"]

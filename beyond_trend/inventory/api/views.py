@@ -120,8 +120,8 @@ class InventoryLogViewSet(BaseModelViewSet):
 
 class ShoeProductViewSet(BaseModelViewSet):
     serializer_class = ShoeSerializer
-    queryset = ShoeProduct.objects.select_related("brand", "category").all()
+    queryset = ShoeProduct.objects.all()
     permission_classes = [IsAuthenticated]
     filterset_class = ShoeFilter
-    search_fields = ["name", "description", "brand__name", "category__name"]
-    ordering_fields = ["name", "created_at"]
+    search_fields = ["brand_name", "description", "color", "size", "barcode"]
+    ordering_fields = ["brand_name", "selling_price", "created_at"]
