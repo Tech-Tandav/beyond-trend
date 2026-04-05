@@ -170,7 +170,7 @@ class SalesAnalyticsView(APIView):
                     {
                         "staff_id": str(row["staff__id"]),
                         "staff_name": (
-                            f"{row['staff__first_name']} {row['staff__last_name']}".strip()
+                            f"{row['staff__name']}".strip()
                             or row["staff__email"]
                         ),
                         "sales_count": row["sales_count"],
