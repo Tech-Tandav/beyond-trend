@@ -3,7 +3,7 @@ from datetime import timedelta
 from django.db.models import Count, DecimalField, ExpressionWrapper, F, Sum
 from django.db.models.functions import TruncDate
 from django.utils import timezone
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -130,7 +130,7 @@ class SalesAnalyticsView(APIView):
 
         # --- Sales by staff ---
         sales_by_staff = (
-            qs.values("staff__id", "staff__first_name", "staff__last_name", "staff__email")
+            qs.values("staff__id", "staff__name",  "staff__email")
             .annotate(
                 sales_count=Count("id"),
                 units_sold=Sum("quantity"),
