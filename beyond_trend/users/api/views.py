@@ -49,6 +49,7 @@ class UserRegisterationView(CreateAPIView):
                     "username": user.username,
                     "email": user.email,
                     "name": user.name,
+                    "is_staff": user.is_staff,
                 },
                 "access": str(refresh.access_token),
                 "refresh": str(refresh),
