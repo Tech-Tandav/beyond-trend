@@ -3,7 +3,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from beyond_trend.inventory.models import ShoeProduct
+from beyond_trend.inventory.models import Product
 
 
 class InventoryAnalyticsView(APIView):
@@ -17,7 +17,7 @@ class InventoryAnalyticsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        qs = ShoeProduct.objects.all()
+        qs = Product.objects.all()
 
         stock_value_expr = ExpressionWrapper(
             F("selling_price") * F("quantity"),

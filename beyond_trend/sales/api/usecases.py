@@ -4,11 +4,11 @@ from django.shortcuts import get_object_or_404
 from rest_framework.exceptions import NotFound, ValidationError
 
 from beyond_trend.core.usecases import BaseUseCase
-from beyond_trend.inventory.models import InventoryLog, ProductVariant, Stock
+from beyond_trend.inventory.models import InventoryLog, Product, Stock
 from beyond_trend.loyalty.models import Customer, LoyaltySettings, LoyaltyTransaction
 
-from beyond_trend.sales.models import Sale, SaleItem, ShoeSale
-from beyond_trend.inventory.models import ShoeProduct
+from beyond_trend.sales.models import Sale, SaleItem
+
 
 
 class CheckoutUseCase(BaseUseCase):
@@ -35,8 +35,8 @@ class CheckoutUseCase(BaseUseCase):
         for item in self._data["items"]:
             vid = item["variant_id"]
             try:
-                variant = ProductVariant.objects.get(id=vid)
-            except ProductVariant.DoesNotExist:
+                variant = Product.objects.get(id=vid)
+            except Product.DoesNotExist:
                 raise NotFound(f"Variant {vid} not found.")
             try:
                 stock = Stock.objects.get(variant=variant)
@@ -146,16 +146,16 @@ class ShoeCheckoutUseCase(CheckoutUseCase):
     def __init__(self, data, staff):
         self._data = data
         self._staff = staff
-        self._shoe_product = None
+        self._product = None
 
     def is_valid(self):
         try:
-            self._shoe_product = ShoeProduct.objects.get(barcode=self._data["bar_code"])
-        except ShoeProduct.DoesNotExist:
+            self._product = Product.objects.get(barcode=self._data["bar_code"])
+        except Product.DoesNotExist:
             raise NotFound("Shoe product not found.")
-        if self._shoe_product.quantity < self._data["quantity"]:
+        if self._product.quantity < self._data["quantity"]:
             raise ValidationError(
-                {"detail": f"Insufficient stock. Available: {self._shoe_product.quantity}, Requested: {self._data['quantity']}"}
+                {"detail": f"Insufficient stock. Available: {self._product.quantity}, Requested: {self._data['quantity']}"}
             )
 
     @transaction.atomic
@@ -164,7 +164,7 @@ class ShoeCheckoutUseCase(CheckoutUseCase):
         return self._factory()
 
     def _factory(self):
-        sale = ShoeSale.objects.create(
+        sale = Sale.objects.create(
             staff=self._staff,
             quantity=self._data["quantity"],
             selling_price=self._data["selling_price"],

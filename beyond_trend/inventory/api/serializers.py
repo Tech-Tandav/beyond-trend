@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from beyond_trend.core.serializers import BaseModelSerializer
 
-from beyond_trend.inventory.models import Brand, Category, InventoryLog, Product, ProductVariant, Stock, ShoeProduct
+from beyond_trend.inventory.models import Brand,  InventoryLog, Product, Stock
 
 
 class BrandSerializer(BaseModelSerializer):
@@ -10,31 +10,6 @@ class BrandSerializer(BaseModelSerializer):
         model = Brand
         fields = ["id", "name", "slug", "is_archived", "created_at"]
         read_only_fields = ["id", "slug", "created_at"]
-
-
-class CategorySerializer(BaseModelSerializer):
-    class Meta(BaseModelSerializer.Meta):
-        model = Category
-        fields = ["id", "name", "slug", "is_archived", "created_at"]
-        read_only_fields = ["id", "slug", "created_at"]
-
-
-class ProductVariantSerializer(BaseModelSerializer):
-    class Meta(BaseModelSerializer.Meta):
-        model = ProductVariant
-        fields = [
-            "id",
-            "product",
-            "size",
-            "color",
-            "barcode",
-            "cost_price",
-            "selling_price",
-            "low_stock_threshold",
-            "is_archived",
-            "created_at",
-        ]
-        read_only_fields = ["id", "barcode", "created_at"]
 
 
 class StockSerializer(BaseModelSerializer):
@@ -50,18 +25,7 @@ class StockSerializer(BaseModelSerializer):
 class ProductSerializer(BaseModelSerializer):
     class Meta(BaseModelSerializer.Meta):
         model = Product
-        fields = [
-            "id",
-            "name",
-            "slug",
-            "brand",
-            "category",
-            "description",
-            "image",
-            "is_published",
-            "is_archived",
-            "created_at",
-        ]
+        fields = '__all__'
         read_only_fields = ["id", "slug", "created_at"]
 
 
@@ -92,23 +56,3 @@ class CheckOutSerializer(serializers.Serializer):
     variant_id = serializers.UUIDField()
     quantity = serializers.IntegerField(min_value=1)
     notes = serializers.CharField(required=False, allow_blank=True, default="")
-
-
-class ShoeSerializer(BaseModelSerializer):
-    class Meta(BaseModelSerializer.Meta):
-        model = ShoeProduct
-        fields = [
-            "id",
-            "slug",
-            "brand_name",
-            "barcode",
-            "selling_price",
-            "size",
-            "color",
-            "description",
-            "quantity",
-            "image",
-            "is_archived",
-            "created_at",
-        ]
-        read_only_fields = ["id", "slug", "created_at"]

@@ -41,8 +41,8 @@ class SaleItem(BaseModel):
         on_delete=models.CASCADE,
         related_name="items",
     )
-    variant = models.ForeignKey(
-        "inventory.ProductVariant",
+    product = models.ForeignKey(
+        "inventory.Product",
         on_delete=models.CASCADE,
         related_name="sale_items",
     )
@@ -53,27 +53,8 @@ class SaleItem(BaseModel):
         ordering = ["sale"]
 
     def __str__(self):
-        return f"{self.variant} x{self.quantity} @ NPR {self.selling_price}"
+        return f"{self.product} x{self.quantity} @ NPR {self.selling_price}"
 
     @property
     def total(self):
         return self.quantity * self.selling_price
-
-
-class ShoeSale(BaseModel):
-    staff = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        related_name="shoesales",
-    )
-    quantity = models.PositiveIntegerField(_("Quantity"))
-    selling_price = models.DecimalField(_("Selling Price"), max_digits=12, decimal_places=2)
-    bar_code = models.CharField(_("Bar Code"), max_length=255)
-    phone_number = models.CharField(_("Phone Number"), max_length=20, blank=True)
-
-    class Meta:
-        ordering = ["-created_at"]
-
-    def __str__(self):
-        return f"Sale #{str(self.id)[:8]} — NPR {self.selling_price}"

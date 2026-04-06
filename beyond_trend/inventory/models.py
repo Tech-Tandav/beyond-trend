@@ -7,22 +7,21 @@ from django.utils.translation import gettext_lazy as _
 from beyond_trend.core.models import BaseModel, BaseModelWithSlug
 
 
-class Brand(BaseModelWithSlug):
-    name = models.CharField(_("Brand Name"), max_length=100, unique=True)
-
-    class Meta:
-        ordering = ["name"]
+class Vendor(models.Model):
+    name = models.CharField(_("Vendor Name"), max_length=255)
+    contact_info = models.TextField(_("Contact Information"), blank=True)
+    pan_number = models.CharField(_("PAN Number"), max_length=20, blank=True, null=True)
+    vat_number = models.CharField(_("VAT Number"), max_length=20, blank=True, null=True)
 
     def __str__(self):
         return self.name
 
 
-class Category(BaseModelWithSlug):
-    name = models.CharField(_("Category Name"), max_length=100, unique=True)
+class Brand(BaseModelWithSlug):
+    name = models.CharField(_("Brand Name"), max_length=100, unique=True)
 
     class Meta:
         ordering = ["name"]
-        verbose_name_plural = "Categories"
 
     def __str__(self):
         return self.name
@@ -37,30 +36,16 @@ class Product(BaseModelWithSlug):
         blank=True,
         related_name="products",
     )
-    category = models.ForeignKey(
-        Category,
+    vendor = models.ForeignKey(
+        Vendor,   
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="products",
-    )
+    ) 
     description = models.TextField(_("Description"), blank=True)
     image = models.ImageField(_("Image"), upload_to="products/", null=True, blank=True)
     is_published = models.BooleanField(_("Published"), default=True)
-
-    class Meta:
-        ordering = ["name"]
-
-    def __str__(self):
-        return self.name
-
-
-class ProductVariant(BaseModel):
-    product = models.ForeignKey(
-        Product,
-        on_delete=models.CASCADE,
-        related_name="variants",
-    )
     size = models.CharField(_("Size"), max_length=20)
     color = models.CharField(_("Color"), max_length=50)
     barcode = models.CharField(_("Barcode"), max_length=100, unique=True, blank=True)
@@ -83,7 +68,7 @@ class ProductVariant(BaseModel):
 
 class Stock(BaseModel):
     variant = models.OneToOneField(
-        ProductVariant,
+        Product,
         on_delete=models.CASCADE,
         related_name="stock",
     )
@@ -116,7 +101,7 @@ class InventoryLog(BaseModel):
     ]
 
     variant = models.ForeignKey(
-        ProductVariant,
+        Product,
         on_delete=models.CASCADE,
         related_name="inventory_logs",
     )
@@ -135,20 +120,3 @@ class InventoryLog(BaseModel):
 
     def __str__(self):
         return f"{self.get_action_display()} | {self.variant} | {self.quantity}"
-
-
-class ShoeProduct(BaseModelWithSlug):
-    brand_name = models.CharField(_("Brand Name"), max_length=255)
-    barcode = models.CharField(_("Barcode"), max_length=100, unique=True, blank=True)
-    selling_price = models.DecimalField(_("Selling Price"), max_digits=10, decimal_places=2)
-    size = models.CharField(_("Size"), max_length=20)
-    color = models.CharField(_("Color"), max_length=50)
-    description = models.TextField(_("Description"), blank=True)
-    quantity = models.PositiveIntegerField(_("Quantity"), default=0)
-    image = models.ImageField(_("Image"), upload_to="products/", null=True, blank=True)
-
-    class Meta:
-        ordering = ["-created_at"]
-
-    def __str__(self):
-        return self.brand_name

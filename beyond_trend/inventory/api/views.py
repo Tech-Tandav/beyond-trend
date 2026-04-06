@@ -5,18 +5,15 @@ from rest_framework.response import Response
 
 from beyond_trend.core.viewsets import BaseModelViewSet
 
-from beyond_trend.inventory.models import Brand, Category, InventoryLog, Product, ProductVariant, Stock, ShoeProduct
-from beyond_trend.inventory.api.filters import InventoryLogFilter, ProductFilter, ProductVariantFilter, StockFilter, ShoeFilter
+from beyond_trend.inventory.models import Brand, InventoryLog, Product, Stock
+from beyond_trend.inventory.api.filters import InventoryLogFilter, ProductFilter, StockFilter
 from beyond_trend.inventory.api.serializers import (
     BrandSerializer,
-    CategorySerializer,
     CheckInSerializer,
     CheckOutSerializer,
     InventoryLogSerializer,
     ProductSerializer,
-    ProductVariantSerializer,
     StockSerializer,
-    ShoeSerializer
 )
 from beyond_trend.inventory.api.usecases import CheckInUseCase, CheckOutUseCase
 
@@ -29,30 +26,13 @@ class BrandViewSet(BaseModelViewSet):
     ordering_fields = ["name"]
 
 
-class CategoryViewSet(BaseModelViewSet):
-    serializer_class = CategorySerializer
-    queryset = Category.objects.all()
-    permission_classes = [IsAuthenticated]
-    search_fields = ["name"]
-    ordering_fields = ["name"]
-
-
 class ProductViewSet(BaseModelViewSet):
     serializer_class = ProductSerializer
-    queryset = Product.objects.select_related("brand", "category").all()
+    queryset = Product.objects.select_related("brand").all()
     permission_classes = [IsAuthenticated]
     filterset_class = ProductFilter
-    search_fields = ["name", "description", "brand__name", "category__name"]
-    ordering_fields = ["name", "created_at"]
-
-
-class ProductVariantViewSet(BaseModelViewSet):
-    serializer_class = ProductVariantSerializer
-    queryset = ProductVariant.objects.select_related("product").all()
-    permission_classes = [IsAuthenticated]
-    filterset_class = ProductVariantFilter
-    search_fields = ["barcode", "size", "color", "product__name"]
-    ordering_fields = ["size", "color", "selling_price", "cost_price"]
+    search_fields = ["name", "description", "brand__name", "barcode", "size", "color", "product__name"]
+    ordering_fields = ["name", "created_at", "size", "color", "selling_price", "cost_price"]
 
     @action(detail=False, methods=["post"], url_path="check-in")
     def check_in(self, request):
@@ -116,13 +96,3 @@ class InventoryLogViewSet(BaseModelViewSet):
     filterset_class = InventoryLogFilter
     search_fields = ["notes", "variant__product__name"]
     ordering_fields = ["created_at", "action", "quantity"]
-
-
-class ShoeProductViewSet(BaseModelViewSet):
-    serializer_class = ShoeSerializer
-    queryset = ShoeProduct.objects.all()
-    permission_classes = [IsAuthenticated]
-    filterset_class = ShoeFilter
-    lookup_field = "barcode"
-    search_fields = ["brand_name", "description", "color", "size", "barcode"]
-    ordering_fields = ["brand_name", "selling_price", "created_at"]

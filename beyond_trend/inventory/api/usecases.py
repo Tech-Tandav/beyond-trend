@@ -3,7 +3,7 @@ from rest_framework.exceptions import NotFound, ValidationError
 
 from beyond_trend.core.usecases import BaseUseCase
 
-from beyond_trend.inventory.models import InventoryLog, ProductVariant, Stock
+from beyond_trend.inventory.models import InventoryLog, Product, Stock
 
 
 class CheckInUseCase(BaseUseCase):
@@ -16,8 +16,8 @@ class CheckInUseCase(BaseUseCase):
 
     def is_valid(self):
         try:
-            self._variant = ProductVariant.objects.get(id=self._variant_id)
-        except ProductVariant.DoesNotExist:
+            self._variant = Product.objects.get(id=self._variant_id)
+        except Product.DoesNotExist:
             raise NotFound("Variant not found.")
 
     @transaction.atomic
@@ -56,8 +56,8 @@ class CheckOutUseCase(BaseUseCase):
 
     def is_valid(self):
         try:
-            self._variant = ProductVariant.objects.get(id=self._variant_id)
-        except ProductVariant.DoesNotExist:
+            self._variant = Product.objects.get(id=self._variant_id)
+        except Product.DoesNotExist:
             raise NotFound("Variant not found.")
 
         try:

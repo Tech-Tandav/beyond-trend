@@ -1,27 +1,21 @@
 import django_filters
 
-from beyond_trend.inventory.models import InventoryLog, Product, ProductVariant, Stock, ShoeProduct
+from beyond_trend.inventory.models import InventoryLog, Product, Stock
 
 
 class ProductFilter(django_filters.FilterSet):
     brand = django_filters.CharFilter(field_name="brand__slug")
     category = django_filters.CharFilter(field_name="category__slug")
     is_published = django_filters.BooleanFilter()
-
-    class Meta:
-        model = Product
-        fields = ["brand", "category", "is_published"]
-
-
-class ProductVariantFilter(django_filters.FilterSet):
     product = django_filters.UUIDFilter(field_name="product__id")
     barcode = django_filters.CharFilter(lookup_expr="iexact")
     size = django_filters.CharFilter(lookup_expr="iexact")
     color = django_filters.CharFilter(lookup_expr="icontains")
 
     class Meta:
-        model = ProductVariant
-        fields = ["product", "barcode", "size", "color"]
+        model = Product
+        fields = ["brand", "category", "is_published", "product", "barcode", "size", "color"]
+
 
 
 class StockFilter(django_filters.FilterSet):
@@ -44,17 +38,3 @@ class InventoryLogFilter(django_filters.FilterSet):
     class Meta:
         model = InventoryLog
         fields = ["variant", "action", "staff", "date_from", "date_to"]
-
-
-class ShoeFilter(django_filters.FilterSet):
-    brand_name = django_filters.CharFilter(lookup_expr="icontains")
-    color = django_filters.CharFilter(lookup_expr="icontains")
-    size = django_filters.CharFilter(lookup_expr="iexact")
-    min_price = django_filters.NumberFilter(field_name="selling_price", lookup_expr="gte")
-    max_price = django_filters.NumberFilter(field_name="selling_price", lookup_expr="lte")
-    date_from = django_filters.DateFilter(field_name="created_at__date", lookup_expr="gte")
-    date_to = django_filters.DateFilter(field_name="created_at__date", lookup_expr="lte")
-
-    class Meta:
-        model = ShoeProduct
-        fields = ["brand_name", "color", "size", "min_price", "max_price", "date_from", "date_to"]

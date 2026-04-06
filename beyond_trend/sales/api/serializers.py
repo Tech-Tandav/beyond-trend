@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from beyond_trend.core.serializers import BaseModelSerializer
 
-from ..models import Sale, SaleItem, ShoeSale
+from ..models import Sale, SaleItem
 
 
 class SaleItemSerializer(BaseModelSerializer):
@@ -67,10 +67,3 @@ class ShoeCheckoutSerializer(serializers.Serializer):
     selling_price = serializers.DecimalField(max_digits=10, decimal_places=2)
     bar_code = serializers.CharField(max_length=255)
     phone_number = serializers.CharField(max_length=20, required=False, allow_blank=True, default="")
-
-
-class ShoeSaleSerializer(BaseModelSerializer):
-    class Meta(BaseModelSerializer.Meta):
-        model = ShoeSale
-        fields = ["id", "staff", "quantity", "selling_price", "bar_code", "phone_number", "created_at"]
-        read_only_fields = ["id", "staff", "created_at"]
