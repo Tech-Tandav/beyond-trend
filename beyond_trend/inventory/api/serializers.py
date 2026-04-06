@@ -111,4 +111,4 @@ class ShoeSerializer(BaseModelSerializer):
             "is_archived",
             "created_at",
         ]
-        read_only_fields = ["id", "slug", "barcode", "created_at"]
+        read_only_fields = ["id", "slug", "created_at"]
