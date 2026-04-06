@@ -54,11 +54,11 @@ class Product(BaseModelWithSlug):
     low_stock_threshold = models.PositiveIntegerField(_("Low Stock Threshold"), default=5)
 
     class Meta:
-        unique_together = [["product", "size", "color"]]
-        ordering = ["product", "size", "color"]
+        unique_together = [["size", "color"]]
+        ordering = [ "size", "color"]
 
     def __str__(self):
-        return f"{self.product.name} - {self.size} / {self.color}"
+        return f"{self.name} - {self.size} / {self.color}"
 
     def save(self, *args, **kwargs):
         if not self.barcode:
@@ -67,7 +67,7 @@ class Product(BaseModelWithSlug):
 
 
 class Stock(BaseModel):
-    variant = models.OneToOneField(
+    product = models.OneToOneField(
         Product,
         on_delete=models.CASCADE,
         related_name="stock",
@@ -79,11 +79,11 @@ class Stock(BaseModel):
         verbose_name_plural = "Stock"
 
     def __str__(self):
-        return f"{self.variant} — {self.quantity} units"
+        return f"{self.product} — {self.quantity} units"
 
     @property
     def is_low_stock(self):
-        return 0 < self.quantity <= self.variant.low_stock_threshold
+        return 0 < self.quantity <= self.product.low_stock_threshold
 
     @property
     def is_out_of_stock(self):

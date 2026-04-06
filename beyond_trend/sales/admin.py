@@ -31,5 +31,5 @@ class SaleAdmin(BaseModelAdmin):
 
 @admin.register(SaleItem)
 class SaleItemAdmin(BaseModelAdmin):
-    list_display = ["sale", "variant", "quantity", "selling_price"]
-    search_fields = ["variant__product__name", "variant__barcode", "id"]
+    list_display = ["sale", "product", "quantity", "selling_price"]
+    search_fields = ["product__name", "product__barcode", "id"]

@@ -52,7 +52,7 @@ class OrderItem(BaseModel):
         related_name="items",
     )
     variant = models.ForeignKey(
-        "inventory.ProductVariant",
+        "inventory.Product",
         on_delete=models.CASCADE,
         related_name="order_items",
     )

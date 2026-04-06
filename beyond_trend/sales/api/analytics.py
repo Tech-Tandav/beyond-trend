@@ -7,8 +7,8 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from beyond_trend.inventory.models import ShoeProduct
-from beyond_trend.sales.models import ShoeSale
+from beyond_trend.inventory.models import Product
+from beyond_trend.sales.models import Sale
 
 
 def _get_date_range(request):
@@ -51,7 +51,7 @@ class SalesAnalyticsView(APIView):
     def get(self, request):
         from_date, to_date = _get_date_range(request)
 
-        qs = ShoeSale.objects.filter(
+        qs = Sale.objects.filter(
             created_at__date__gte=from_date,
             created_at__date__lte=to_date,
         )
@@ -111,7 +111,7 @@ class SalesAnalyticsView(APIView):
         barcodes = [r["bar_code"] for r in top_products_qs]
         shoe_map = {
             s.barcode: s
-            for s in ShoeProduct.objects.filter(barcode__in=barcodes)
+            for s in Product.objects.filter(barcode__in=barcodes)
         }
 
         top_products = []

@@ -2,8 +2,8 @@ from django.db import transaction
 from rest_framework.exceptions import NotFound
 
 from beyond_trend.core.usecases import BaseUseCase
-from beyond_trend.inventory.models import ProductVariant
 from beyond_trend.loyalty.models import Customer
+from beyond_trend.inventory.models import Product
 
 from beyond_trend.orders.models import Order, OrderItem, PreOrder
 
@@ -25,9 +25,9 @@ class CreateOrderUseCase(BaseUseCase):
 
         for item in self._data["items"]:
             try:
-                variant = ProductVariant.objects.get(id=item["variant_id"])
-            except ProductVariant.DoesNotExist:
-                raise NotFound(f"Variant {item['variant_id']} not found.")
+                variant = Product.objects.get(id=item["product_id"])
+            except Product.DoesNotExist:
+                raise NotFound(f"Product {item['product_id']} not found.")
             price = variant.selling_price
             self._total_amount += price * item["quantity"]
             self._items_to_create.append((variant, item["quantity"], price))
