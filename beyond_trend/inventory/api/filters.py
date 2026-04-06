@@ -52,7 +52,9 @@ class ShoeFilter(django_filters.FilterSet):
     size = django_filters.CharFilter(lookup_expr="iexact")
     min_price = django_filters.NumberFilter(field_name="selling_price", lookup_expr="gte")
     max_price = django_filters.NumberFilter(field_name="selling_price", lookup_expr="lte")
+    date_from = django_filters.DateFilter(field_name="created_at__date", lookup_expr="gte")
+    date_to = django_filters.DateFilter(field_name="created_at__date", lookup_expr="lte")
 
     class Meta:
         model = ShoeProduct
-        fields = ["brand_name", "color", "size", "min_price", "max_price"]
+        fields = ["brand_name", "color", "size", "min_price", "max_price", "date_from", "date_to"]

@@ -16,7 +16,7 @@ class SaleViewSet(BaseModelViewSet):
     queryset = ShoeSale.objects.all()
     permission_classes = [IsAuthenticated]
     # http_method_names = ["get", "head", "options", "post"]
-    # filterset_class = SaleFilter
+    filterset_class = SaleFilter
     # search_fields = ["customer__name", "customer__email", "staff__name"]
     # ordering_fields = ["created_at", "total_amount", "subtotal"]
 
