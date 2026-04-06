@@ -52,9 +52,9 @@ class Product(BaseModelWithSlug):
     selling_price = models.DecimalField(_("Selling Price"), max_digits=10, decimal_places=2, null=True, blank=True)
     low_stock_threshold = models.PositiveIntegerField(_("Low Stock Threshold"), default=5)
 
-    class Meta:
-        unique_together = ["brand", "model", "size", "color"]
-        ordering = ["brand", "model", "size", "color"]
+    # class Meta:
+    #     unique_together = ["brand", "model", "size", "color"]
+    #     ordering = ["brand", "model", "size", "color"]
 
     def __str__(self):
         return f"{self.brand} {self.model} - {self.size} / {self.color}"
