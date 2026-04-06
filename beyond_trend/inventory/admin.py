@@ -20,9 +20,9 @@ class BrandAdmin(BaseModelAdmin):
 
 @admin.register(Product)
 class ProductAdmin(BasePublishModelAdmin):
-    list_display = ["name", "brand",  "is_published", "is_archived", "created_at"]
-    list_filter = ["brand",  "is_published", "is_archived"]
-    search_fields = ["name", "id"]
+    list_display = ["brand", "model", "color", "size", "is_published", "is_archived", "created_at"]
+    list_filter = ["brand", "is_published", "is_archived"]
+    search_fields = ["model", "brand__name", "id"]
 
 
 @admin.register(Stock)

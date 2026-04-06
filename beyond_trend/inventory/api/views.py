@@ -1,7 +1,12 @@
+from collections import defaultdict
+
+from django.db.models import Sum
+
 from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from beyond_trend.core.viewsets import BaseModelViewSet
 
@@ -39,8 +44,8 @@ class ProductViewSet(BaseModelViewSet):
     queryset = Product.objects.select_related("brand").all()
     permission_classes = [IsAuthenticated]
     filterset_class = ProductFilter
-    search_fields = ["name", "description", "brand__name", "barcode", "size", "color", "product__name"]
-    ordering_fields = ["name", "created_at", "size", "color", "cost_price"]
+    search_fields = ["model", "description", "brand__name", "barcode", "size", "color"]
+    ordering_fields = ["model", "created_at", "size", "color"]
 
     @action(detail=False, methods=["post"], url_path="check-in")
     def check_in(self, request):
@@ -50,7 +55,7 @@ class ProductViewSet(BaseModelViewSet):
         data = serializer.validated_data
 
         use_case = CheckInUseCase(
-            variant_id=data["variant_id"],
+            product_id=data["product_id"],
             quantity=data["quantity"],
             notes=data.get("notes", ""),
             staff=request.user,
@@ -102,5 +107,45 @@ class InventoryLogViewSet(BaseModelViewSet):
     permission_classes = [IsAuthenticated]
     http_method_names = ["get", "head", "options"]
     filterset_class = InventoryLogFilter
-    search_fields = ["notes", "variant__product__name"]
+    search_fields = ["notes"]
     ordering_fields = ["created_at", "action", "quantity"]
+
+
+class PublicInventoryView(APIView):
+    """
+    GET /api/v1/inventory/public/
+
+    Public endpoint returning accumulated inventory grouped by brand + model.
+    """
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        products = (
+            Product.objects.filter(is_published=True)
+            .select_related("brand", "stock")
+            .order_by("brand__name", "model")
+        )
+
+        grouped = defaultdict(lambda: {"colors": set(), "sizes": set(), "quantity": 0})
+
+        for product in products:
+            key = (product.brand.name if product.brand else "", product.model)
+            grouped[key]["colors"].add(product.color)
+            grouped[key]["sizes"].add(product.size)
+            stock = getattr(product, "stock", None)
+            if stock:
+                grouped[key]["quantity"] += stock.quantity
+
+        result = [
+            {
+                "brand_name": brand_name,
+                "model": model,
+                "color": sorted(data["colors"]),
+                "size": sorted(data["sizes"]),
+                "quantity": data["quantity"],
+            }
+            for (brand_name, model), data in grouped.items()
+        ]
+
+        return Response(result)

@@ -8,6 +8,7 @@ from beyond_trend.inventory.api.views import (
     BrandViewSet,
     InventoryLogViewSet,
     ProductViewSet,
+    PublicInventoryView,
     StockViewSet,
 )
 
@@ -24,5 +25,6 @@ app_name = "inventory"
 
 urlpatterns = [
     path("analytics/", InventoryAnalyticsView.as_view(), name="inventory-analytics"),
+    path("public-inventory/", PublicInventoryView.as_view(), name="inventory-public"),
 ]
 urlpatterns += router.urls

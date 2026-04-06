@@ -41,7 +41,7 @@ class InventoryAnalyticsView(APIView):
         # --- Stock by brand ---
         stock_by_brand = (
             qs.annotate(stock_value=stock_value_expr)
-            .values("brand_name")
+            .values("brand__name")
             .annotate(
                 products=Count("id"),
                 units=Sum("quantity"),
@@ -53,18 +53,18 @@ class InventoryAnalyticsView(APIView):
         # --- Top stocked products ---
         top_stocked = (
             qs.annotate(stock_value=stock_value_expr)
-            .values("barcode", "brand_name", "size", "color", "quantity", "selling_price", "stock_value")
+            .values("barcode", "brand__name", "model", "size", "color", "quantity", "selling_price", "stock_value")
             .order_by("-quantity")[:10]
         )
 
         # --- Low stock items (quantity 1–5) ---
         low_stock_items = qs.filter(quantity__gt=0, quantity__lte=5).values(
-            "barcode", "brand_name", "size", "color", "quantity", "selling_price"
+            "barcode", "brand__name", "model", "size", "color", "quantity", "selling_price"
         ).order_by("quantity")
 
         # --- Out of stock items ---
         out_of_stock_items = qs.filter(quantity=0).values(
-            "barcode", "brand_name", "size", "color", "selling_price"
+            "barcode", "brand__name", "model", "size", "color", "selling_price"
         )
 
         return Response(
@@ -78,7 +78,7 @@ class InventoryAnalyticsView(APIView):
                 },
                 "stock_by_brand": [
                     {
-                        "brand_name": row["brand_name"],
+                        "brand_name": row["brand__name"],
                         "products": row["products"],
                         "units": row["units"],
                         "stock_value": row["stock_value"],
@@ -88,7 +88,8 @@ class InventoryAnalyticsView(APIView):
                 "top_stocked_products": [
                     {
                         "barcode": row["barcode"],
-                        "brand_name": row["brand_name"],
+                        "brand_name": row["brand__name"],
+                        "model": row["model"],
                         "size": row["size"],
                         "color": row["color"],
                         "quantity": row["quantity"],

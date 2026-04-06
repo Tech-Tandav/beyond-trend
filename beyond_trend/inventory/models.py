@@ -28,7 +28,6 @@ class Brand(BaseModelWithSlug):
 
 
 class Product(BaseModelWithSlug):
-    name = models.CharField(_("Product Name"), max_length=255)
     brand = models.ForeignKey(
         Brand,
         on_delete=models.SET_NULL,
@@ -36,13 +35,14 @@ class Product(BaseModelWithSlug):
         blank=True,
         related_name="products",
     )
+    model = models.CharField(_("Model"), max_length=255, default="")
     vendor = models.ForeignKey(
-        Vendor,   
+        Vendor,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="products",
-    ) 
+    )
     description = models.TextField(_("Description"), blank=True)
     image = models.ImageField(_("Image"), upload_to="products/", null=True, blank=True)
     is_published = models.BooleanField(_("Published"), default=True)
@@ -53,11 +53,11 @@ class Product(BaseModelWithSlug):
     low_stock_threshold = models.PositiveIntegerField(_("Low Stock Threshold"), default=5)
 
     class Meta:
-        unique_together = [["size", "color"]]
-        ordering = [ "size", "color"]
+        unique_together = [["brand", "model", "size", "color"]]
+        ordering = ["brand", "model", "size", "color"]
 
     def __str__(self):
-        return f"{self.name} - {self.size} / {self.color}"
+        return f"{self.brand} {self.model} - {self.size} / {self.color}"
 
     def save(self, *args, **kwargs):
         if not self.barcode:

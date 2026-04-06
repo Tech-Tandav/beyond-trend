@@ -35,11 +35,11 @@ class ProductSerializer(BaseModelSerializer):
         model = Product
         fields = [
             "id",
-            "name",
             "slug",
             "is_archived",
             "created_at",
             "brand",
+            "model",
             "vendor",
             "description",
             "image",
