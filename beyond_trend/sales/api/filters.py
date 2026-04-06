@@ -1,6 +1,6 @@
 import django_filters
 
-from beyond_trend.sales.models import Sale
+from beyond_trend.sales.models import Sale, ShoeSale
 
 
 class SaleFilter(django_filters.FilterSet):
@@ -10,5 +10,5 @@ class SaleFilter(django_filters.FilterSet):
     date_to = django_filters.DateFilter(field_name="created_at__date", lookup_expr="lte")
 
     class Meta:
-        model = Sale
+        model = ShoeSale
         fields = ["staff", "date_from", "date_to"]
