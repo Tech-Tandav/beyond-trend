@@ -40,7 +40,7 @@ class ProductViewSet(BaseModelViewSet):
     permission_classes = [IsAuthenticated]
     filterset_class = ProductFilter
     search_fields = ["name", "description", "brand__name", "barcode", "size", "color", "product__name"]
-    ordering_fields = ["name", "created_at", "size", "color", "selling_price", "cost_price"]
+    ordering_fields = ["name", "created_at", "size", "color", "cost_price"]
 
     @action(detail=False, methods=["post"], url_path="check-in")
     def check_in(self, request):

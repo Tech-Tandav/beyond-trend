@@ -33,7 +33,22 @@ class StockSerializer(BaseModelSerializer):
 class ProductSerializer(BaseModelSerializer):
     class Meta(BaseModelSerializer.Meta):
         model = Product
-        fields = '__all__'
+        fields = [
+            "id",
+            "name",
+            "slug",
+            "is_archived",
+            "created_at",
+            "brand",
+            "vendor",
+            "description",
+            "image",
+            "size",
+            "color",
+            "barcode",
+            "selling_price",
+            "low_stock_threshold",
+        ]
         read_only_fields = ["id", "slug", "created_at"]
 
 
