@@ -5,9 +5,10 @@ from rest_framework.response import Response
 
 from beyond_trend.core.viewsets import BaseModelViewSet
 
-from beyond_trend.inventory.models import Brand, InventoryLog, Product, Stock
+from beyond_trend.inventory.models import Vendor, Brand, InventoryLog, Product, Stock
 from beyond_trend.inventory.api.filters import InventoryLogFilter, ProductFilter, StockFilter
 from beyond_trend.inventory.api.serializers import (
+    VendorSerializer,
     BrandSerializer,
     CheckInSerializer,
     CheckOutSerializer,
@@ -17,6 +18,13 @@ from beyond_trend.inventory.api.serializers import (
 )
 from beyond_trend.inventory.api.usecases import CheckInUseCase, CheckOutUseCase
 
+
+class VendorViewSet(BaseModelViewSet):
+    serializer_class = VendorSerializer
+    queryset = Vendor.objects.all()
+    permission_classes = [IsAuthenticated]
+    search_fields = ["name"]
+    ordering_fields = ["name"]
 
 class BrandViewSet(BaseModelViewSet):
     serializer_class = BrandSerializer

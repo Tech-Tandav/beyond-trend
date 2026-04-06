@@ -4,6 +4,7 @@ from rest_framework.routers import DefaultRouter, SimpleRouter
 
 from beyond_trend.inventory.api.analytics import InventoryAnalyticsView
 from beyond_trend.inventory.api.views import (
+    VendorViewSet,
     BrandViewSet,
     InventoryLogViewSet,
     ProductViewSet,
@@ -12,6 +13,8 @@ from beyond_trend.inventory.api.views import (
 
 router = DefaultRouter() if settings.DEBUG else SimpleRouter()
 
+
+router.register("vendors", VendorViewSet)
 router.register("brands", BrandViewSet)
 router.register("products", ProductViewSet)
 router.register("stocks", StockViewSet)
