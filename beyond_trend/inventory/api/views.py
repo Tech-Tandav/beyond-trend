@@ -1,6 +1,5 @@
-from collections import defaultdict
-
-from django.db.models import Sum
+from django.db.models import F, Sum, Value
+from django.db.models.functions import Coalesce
 
 from rest_framework import status
 from rest_framework.decorators import action
@@ -89,15 +88,18 @@ class StockViewSet(BaseModelViewSet):
     @action(detail=False, methods=["get"], url_path="low-stock")
     def low_stock(self, request):
         """Return all variants with low stock."""
-        items = [s for s in self.get_queryset() if s.is_low_stock]
-        serializer = self.get_serializer(items, many=True)
+        qs = self.get_queryset().filter(
+            quantity__gt=0,
+            quantity__lte=F("variant__product__low_stock_threshold"),
+        )
+        serializer = self.get_serializer(qs, many=True)
         return Response(serializer.data)
 
     @action(detail=False, methods=["get"], url_path="out-of-stock")
     def out_of_stock(self, request):
         """Return all out-of-stock variants."""
-        items = [s for s in self.get_queryset() if s.is_out_of_stock]
-        serializer = self.get_serializer(items, many=True)
+        qs = self.get_queryset().filter(quantity=0)
+        serializer = self.get_serializer(qs, many=True)
         return Response(serializer.data)
 
 
@@ -121,31 +123,28 @@ class PublicInventoryView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        products = (
+        from django.contrib.postgres.aggregates import ArrayAgg
+
+        rows = (
             Product.objects.filter(is_published=True)
-            .select_related("brand", "stock")
-            .order_by("brand__name", "model")
+            .values(brand_name=Coalesce("brand__name", Value("")), model=F("model"))
+            .annotate(
+                colors=ArrayAgg("color", distinct=True, ordering="color"),
+                sizes=ArrayAgg("size", distinct=True, ordering="size"),
+                quantity=Coalesce(Sum("stock__quantity"), 0),
+            )
+            .order_by("brand_name", "model")
         )
-
-        grouped = defaultdict(lambda: {"colors": set(), "sizes": set(), "quantity": 0})
-
-        for product in products:
-            key = (product.brand.name if product.brand else "", product.model)
-            grouped[key]["colors"].add(product.color)
-            grouped[key]["sizes"].add(product.size)
-            stock = getattr(product, "stock", None)
-            if stock:
-                grouped[key]["quantity"] += stock.quantity
 
         result = [
             {
-                "brand_name": brand_name,
-                "model": model,
-                "color": sorted(data["colors"]),
-                "size": sorted(data["sizes"]),
-                "quantity": data["quantity"],
+                "brand_name": row["brand_name"],
+                "model": row["model"],
+                "color": row["colors"],
+                "size": row["sizes"],
+                "quantity": row["quantity"],
             }
-            for (brand_name, model), data in grouped.items()
+            for row in rows
         ]
 
         return Response(result)
