@@ -53,7 +53,7 @@ class Product(BaseModelWithSlug):
     low_stock_threshold = models.PositiveIntegerField(_("Low Stock Threshold"), default=5)
 
     class Meta:
-        unique_together = [["brand", "model", "size", "color"]]
+        unique_together = ["brand", "model", "size", "color"]
         ordering = ["brand", "model", "size", "color"]
 
     def __str__(self):
