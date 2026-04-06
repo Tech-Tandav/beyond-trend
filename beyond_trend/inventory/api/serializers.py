@@ -2,14 +2,15 @@ from rest_framework import serializers
 
 from beyond_trend.core.serializers import BaseModelSerializer
 
-from beyond_trend.inventory.models import Brand,  InventoryLog, Product, Stock
+from beyond_trend.inventory.models import Brand,  InventoryLog, Product, Stock, Vendor
 
 
 class VendorSerializer(BaseModelSerializer):
     class Meta(BaseModelSerializer.Meta):
-        model = Brand
-        fields = ["id", "name", "slug", "is_archived", "created_at"]
+        model = Vendor
+        fields = ["id", "name", "slug", "is_archived", "created_at", "contact_info", "pan_number", "vat_number"]
         read_only_fields = ["id", "slug", "created_at"]
+        
         
         
 class BrandSerializer(BaseModelSerializer):
