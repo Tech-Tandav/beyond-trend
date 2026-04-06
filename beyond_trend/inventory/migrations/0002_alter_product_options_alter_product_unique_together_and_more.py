@@ -10,14 +10,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AlterModelOptions(
-            name='product',
-            options={'ordering': ['brand', 'model', 'size', 'color']},
-        ),
-        migrations.AlterUniqueTogether(
-            name='product',
-            unique_together={('brand', 'model', 'size', 'color')},
-        ),
         migrations.AddField(
             model_name='product',
             name='model',
