@@ -1,10 +1,10 @@
 volumes:
-  shoe_postgres_data: {}
-  shoe_postgres_data_backups: {}
-  shoe_django_media: {}
-  shoe_django_staticfiles: {}
+  shoe_prodprodpostgres_data: {}
+  shoe_prodprodpostgres_data_backups: {}
+  shoe_prodproddjango_media: {}
+  shoe_prodproddjango_staticfiles: {}
   
-  shoe_redis_data: {}
+  shoe_prodprodredis_data: {}
   
 networks:
   beyond_trend:
@@ -15,9 +15,9 @@ services:
       context: .
       dockerfile: ./compose/production/django/Dockerfile
 
-    image: beyond_trend_shoe_django
+    image: beyond_trend_shoe_prodproddjango
     volumes:
-      - shoe_django_media:/app/beyond_trend/media
+      - shoe_prodproddjango_media:/app/beyond_trend/media
     depends_on:
       - postgres
       - redis
@@ -33,10 +33,10 @@ services:
     build:
       context: .
       dockerfile: ./compose/production/postgres/Dockerfile
-    image: beyond_trend_shoe_postgres
+    image: beyond_trend_shoe_prodprodpostgres
     volumes:
-      - shoe_postgres_data:/var/lib/postgresql/data
-      - shoe_postgres_data_backups:/backups
+      - shoe_prodprodpostgres_data:/var/lib/postgresql/data
+      - shoe_prodprodpostgres_data_backups:/backups
     env_file:
       - ./.envs/.production/.postgres
     networks:
@@ -47,7 +47,7 @@ services:
     image: docker.io/redis:6
     
     volumes:
-      - shoe_redis_data:/data
+      - shoe_prodprodredis_data:/data
     
     networks:
       - beyond_trend
@@ -55,7 +55,7 @@ services:
 
   celeryworker:
     <<: *django
-    image: beyond_trend_shoe_celeryworker
+    image: beyond_trend_shoe_prodprodceleryworker
     command: /start-celeryworker
     networks:
       - beyond_trend
@@ -63,7 +63,7 @@ services:
 
   celerybeat:
     <<: *django
-    image: beyond_trend_shoe_celerybeat
+    image: beyond_trend_shoe_prodprodcelerybeat
     command: /start-celerybeat
     networks:
       - beyond_trend
@@ -71,7 +71,7 @@ services:
 
   flower:
     <<: *django
-    image: beyond_trend_shoe_flower
+    image: beyond_trend_shoe_prodprodflower
     command: /start-flower
     networks:
       - beyond_trend
@@ -81,11 +81,11 @@ services:
     build:
       context: .
       dockerfile: ./compose/production/nginx/Dockerfile
-    image: beyond_trend_shoe_nginx
+    image: beyond_trend_shoe_prodprodnginx
     depends_on:
       - django
     volumes:
-      - shoe_django_media:/app/media
+      - shoe_prodproddjango_media:/app/media
     ports:
       - 9119:80
     networks:

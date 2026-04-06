@@ -7,7 +7,7 @@ from django.utils.translation import gettext_lazy as _
 from beyond_trend.core.models import BaseModel, BaseModelWithSlug
 
 
-class Vendor(models.Model):
+class Vendor(BaseModelWithSlug):
     name = models.CharField(_("Vendor Name"), max_length=255)
     contact_info = models.TextField(_("Contact Information"), blank=True)
     pan_number = models.CharField(_("PAN Number"), max_length=20, blank=True, null=True)
