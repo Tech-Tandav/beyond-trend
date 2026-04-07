@@ -159,7 +159,7 @@ class PublicInventoryView(APIView):
 
         rows = (
             Product.objects.filter(is_published=True)
-            .values("model", brand_name=Coalesce("brand__name", Value("")))
+            .values("slug", "model", "image", brand_name=Coalesce("brand__name", Value("")))
             .annotate(
                 colors=ArrayAgg("color", distinct=True, ordering="color"),
                 sizes=ArrayAgg("size", distinct=True, ordering="size"),
