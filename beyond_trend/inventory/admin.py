@@ -1,6 +1,7 @@
 from django.contrib import admin
 
 from beyond_trend.core.admin import BaseModelAdmin, BasePublishModelAdmin
+from beyond_trend.core.excel import ExcelExportMixin
 
 from beyond_trend.inventory.models import Vendor, Brand, InventoryLog, Product, Stock
 
@@ -19,10 +20,34 @@ class BrandAdmin(BaseModelAdmin):
 
 
 @admin.register(Product)
-class ProductAdmin(BasePublishModelAdmin):
+class ProductAdmin(ExcelExportMixin, BasePublishModelAdmin):
     list_display = ["brand", "model", "color", "size", "is_published", "is_archived", "created_at"]
     list_filter = ["brand", "is_published", "is_archived"]
     search_fields = ["model", "brand__name", "id"]
+    actions = ["archive", "restore", "publish", "hide", "export_to_excel"]
+
+    excel_export_fields = [
+        ("Product ID", "id"),
+        ("Brand", "brand__name"),
+        ("Model", "model"),
+        ("Size", "size"),
+        ("Color", "color"),
+        ("Barcode", "barcode"),
+        ("Vendor", "vendor__name"),
+        ("Selling Price", "selling_price"),
+        ("Stock Quantity", "stock__quantity"),
+        ("Low Stock Threshold", "low_stock_threshold"),
+        ("Published", "is_published"),
+        ("Archived", "is_archived"),
+        ("Created At", "created_at"),
+    ]
+    excel_sheet_name = "Products"
+    excel_filename_prefix = "products"
+
+    def get_excel_sheets(self, request, queryset):
+        return super().get_excel_sheets(
+            request, queryset.select_related("brand", "vendor", "stock")
+        )
 
 
 @admin.register(Stock)

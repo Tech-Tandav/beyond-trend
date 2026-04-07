@@ -37,3 +37,4 @@ django-better-admin-arrayfield==1.4.2
 django-filter==25.2
 drf-standardized-errors==0.15.0
 djangorestframework-simplejwt==5.5.1
+openpyxl==3.1.5  # https://github.com/openpyxl/openpyxl
