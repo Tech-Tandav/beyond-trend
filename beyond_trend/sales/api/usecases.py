@@ -33,7 +33,7 @@ class CheckoutUseCase(BaseUseCase):
                 raise NotFound("Customer not found.")
 
         for item in self._data["items"]:
-            vid = item["variant_id"]
+            vid = item["product_id"]
             try:
                 variant = Product.objects.get(id=vid)
             except Product.DoesNotExist:
