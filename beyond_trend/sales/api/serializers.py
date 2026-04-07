@@ -43,7 +43,7 @@ class SaleSerializer(BaseModelSerializer):
 
 
 class CheckoutItemSerializer(serializers.Serializer):
-    variant_id = serializers.UUIDField()
+    product_id = serializers.UUIDField()
     quantity = serializers.IntegerField(min_value=1)
     selling_price = serializers.DecimalField(max_digits=10, decimal_places=2)
 
