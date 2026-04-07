@@ -7,6 +7,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from beyond_trend.core.pagination import CustomPagination
 from beyond_trend.core.viewsets import BaseModelViewSet
 
 from beyond_trend.inventory.models import Vendor, Brand, InventoryLog, Product, Stock
@@ -121,6 +122,7 @@ class PublicInventoryView(APIView):
     """
 
     permission_classes = [AllowAny]
+    pagination_class = CustomPagination
 
     def get(self, request):
         from django.contrib.postgres.aggregates import ArrayAgg
@@ -136,6 +138,9 @@ class PublicInventoryView(APIView):
             .order_by("brand_name", "model")
         )
 
+        paginator = self.pagination_class()
+        page = paginator.paginate_queryset(rows, request, view=self)
+
         result = [
             {
                 "brand_name": row["brand_name"],
@@ -144,7 +149,7 @@ class PublicInventoryView(APIView):
                 "size": row["sizes"],
                 "quantity": row["quantity"],
             }
-            for row in rows
+            for row in page
         ]
 
-        return Response(result)
+        return paginator.get_paginated_response(result)
