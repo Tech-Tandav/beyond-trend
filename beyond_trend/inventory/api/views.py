@@ -1,7 +1,7 @@
 from django.db.models import F, Sum, Value
 from django.db.models.functions import Coalesce
 
-from rest_framework import status
+from rest_framework import generics, status
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -39,16 +39,43 @@ class BrandViewSet(BaseModelViewSet):
     ordering_fields = ["name"]
 
 
-class ProductViewSet(BaseModelViewSet):
+class ProductListView(generics.ListAPIView):
     serializer_class = ProductSerializer
     queryset = Product.objects.select_related("brand").all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
     filterset_class = ProductFilter
     search_fields = ["model", "description", "brand__name", "barcode", "size", "color"]
     ordering_fields = ["model", "created_at", "size", "color"]
 
-    @action(detail=False, methods=["post"], url_path="check-in")
-    def check_in(self, request):
+
+class ProductCreateView(generics.CreateAPIView):
+    serializer_class = ProductSerializer
+    queryset = Product.objects.select_related("brand").all()
+    permission_classes = [IsAuthenticated]
+
+
+class ProductRetrieveView(generics.RetrieveAPIView):
+    serializer_class = ProductSerializer
+    queryset = Product.objects.select_related("brand").all()
+    permission_classes = [AllowAny]
+
+
+class ProductUpdateView(generics.UpdateAPIView):
+    serializer_class = ProductSerializer
+    queryset = Product.objects.select_related("brand").all()
+    permission_classes = [IsAuthenticated]
+
+
+class ProductDestroyView(generics.DestroyAPIView):
+    serializer_class = ProductSerializer
+    queryset = Product.objects.select_related("brand").all()
+    permission_classes = [IsAuthenticated]
+
+
+class ProductCheckInView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
         """Add stock for a variant (Check-In)."""
         serializer = CheckInSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -62,8 +89,11 @@ class ProductViewSet(BaseModelViewSet):
         )
         return Response(use_case.execute(), status=status.HTTP_200_OK)
 
-    @action(detail=False, methods=["post"], url_path="check-out")
-    def check_out(self, request):
+
+class ProductCheckOutView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
         """Remove stock for a variant (manual inventory check-out)."""
         serializer = CheckOutSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -143,11 +173,13 @@ class PublicInventoryView(APIView):
 
         result = [
             {
+                "slug": row['slug'],
                 "brand_name": row["brand_name"],
                 "model": row["model"],
                 "color": row["colors"],
                 "size": row["sizes"],
                 "quantity": row["quantity"],
+                "image": row["img"] if "img" in row else None,
             }
             for row in page
         ]
