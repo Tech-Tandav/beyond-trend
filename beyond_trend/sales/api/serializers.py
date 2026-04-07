@@ -10,7 +10,7 @@ class SaleItemSerializer(BaseModelSerializer):
 
     class Meta(BaseModelSerializer.Meta):
         model = SaleItem
-        fields = ["id", "variant", "quantity", "selling_price", "total"]
+        fields = ["id", "product", "quantity", "selling_price", "total"]
         read_only_fields = ["id", "total"]
 
 
