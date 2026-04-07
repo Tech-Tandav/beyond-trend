@@ -143,10 +143,9 @@ class CheckoutUseCase(BaseUseCase):
                 )
 
         if self._order is not None:
-            # Items have moved to the Sale — clear them from the order and mark it delivered.
+            # Items have moved to the Sale — remove the order entirely.
             self._order.items.all().delete()
-            self._order.status = Order.DELIVERED
-            self._order.save(update_fields=["status"])
+            self._order.delete()
 
         if self._customer:
             if not self._loyalty_settings:
