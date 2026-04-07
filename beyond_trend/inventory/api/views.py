@@ -287,18 +287,14 @@ class InventoryLogViewSet(BaseModelViewSet):
     ordering_fields = ["created_at", "action", "quantity"]
 
 
-PublicInventoryItemSerializer = inline_serializer(
-    name="PublicInventoryItem",
-    fields={
-        "slug": serializers.CharField(),
-        "brand_name": serializers.CharField(),
-        "model": serializers.CharField(),
-        "color": serializers.ListField(child=serializers.CharField()),
-        "size": serializers.ListField(child=serializers.CharField()),
-        "quantity": serializers.IntegerField(),
-        "image": serializers.CharField(allow_null=True),
-    },
-)
+class PublicInventoryItemSerializer(serializers.Serializer):
+    slug = serializers.CharField()
+    brand_name = serializers.CharField()
+    model = serializers.CharField()
+    color = serializers.ListField(child=serializers.CharField())
+    size = serializers.ListField(child=serializers.CharField())
+    quantity = serializers.IntegerField()
+    image = serializers.CharField(allow_null=True)
 
 
 @extend_schema(
