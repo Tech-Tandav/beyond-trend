@@ -99,7 +99,7 @@ class InventoryLog(BaseModel):
         (ADJUSTMENT, "Adjustment"),
     ]
 
-    variant = models.ForeignKey(
+    product = models.ForeignKey(
         Product,
         on_delete=models.CASCADE,
         related_name="inventory_logs",

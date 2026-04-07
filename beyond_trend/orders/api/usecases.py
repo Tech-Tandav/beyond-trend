@@ -95,7 +95,7 @@ class CreateOrderUseCase(BaseUseCase):
                 price=price,
             )
             InventoryLog.objects.create(
-                variant=product,
+                product=product,
                 action=InventoryLog.CHECK_OUT,
                 quantity=-quantity,
                 staff=self._staff,
@@ -147,7 +147,7 @@ class UpdateOrderStatusUseCase(BaseUseCase):
                 stock.save(update_fields=["quantity"])
 
                 InventoryLog.objects.create(
-                    variant=item.product,
+                    prodcut=item.product,
                     action=InventoryLog.CHECK_IN,
                     quantity=item.quantity,
                     staff=self._staff,

@@ -16,7 +16,7 @@ class CheckoutUseCase(BaseUseCase):
         self._data = data
         self._staff = staff
         self._customer = None
-        self._variants = {}
+        self._products = {}
         self._stocks = {}
         self._loyalty_settings = None
         self._subtotal = 0
@@ -35,21 +35,21 @@ class CheckoutUseCase(BaseUseCase):
         for item in self._data["items"]:
             vid = item["product_id"]
             try:
-                variant = Product.objects.get(id=vid)
+                product = Product.objects.get(id=vid)
             except Product.DoesNotExist:
-                raise NotFound(f"Variant {vid} not found.")
+                raise NotFound(f"product {vid} not found.")
             try:
-                stock = Stock.objects.get(variant=variant)
+                stock = Stock.objects.get(product=product)
             except Stock.DoesNotExist:
-                raise ValidationError({"detail": f"No stock for variant: {variant}"})
+                raise ValidationError({"detail": f"No stock for product: {product}"})
             if stock.quantity < item["quantity"]:
                 raise ValidationError(
                     {
-                        "detail": f"Insufficient stock for {variant}. "
+                        "detail": f"Insufficient stock for {product}. "
                         f"Available: {stock.quantity}, Requested: {item['quantity']}"
                     }
                 )
-            self._variants[str(vid)] = variant
+            self._products[str(vid)] = product
             self._stocks[str(vid)] = stock
 
         self._subtotal = sum(
@@ -85,13 +85,13 @@ class CheckoutUseCase(BaseUseCase):
         )
 
         for item in self._data["items"]:
-            vid = str(item["variant_id"])
-            variant = self._variants[vid]
+            vid = str(item["product_id"])
+            product = self._products[vid]
             stock = self._stocks[vid]
 
             SaleItem.objects.create(
                 sale=sale,
-                variant=variant,
+                product=product,
                 quantity=item["quantity"],
                 selling_price=item["selling_price"],
             )
@@ -100,7 +100,7 @@ class CheckoutUseCase(BaseUseCase):
             stock.save(update_fields=["quantity"])
 
             InventoryLog.objects.create(
-                variant=variant,
+                product=product,
                 action=InventoryLog.CHECK_OUT,
                 quantity=-item["quantity"],
                 staff=self._staff,
