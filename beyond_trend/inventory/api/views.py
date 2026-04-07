@@ -293,6 +293,7 @@ class PublicInventoryItemSerializer(serializers.Serializer):
     model = serializers.CharField()
     color = serializers.ListField(child=serializers.CharField())
     size = serializers.ListField(child=serializers.CharField())
+    barcode = serializers.ListField(child=serializers.CharField())
     quantity = serializers.IntegerField()
     image = serializers.CharField(allow_null=True)
 
@@ -326,6 +327,7 @@ class PublicInventoryView(APIView):
             .annotate(
                 colors=ArrayAgg("color", distinct=True, ordering="color"),
                 sizes=ArrayAgg("size", distinct=True, ordering="size"),
+                barcodes=ArrayAgg("barcode", distinct=True, ordering="barcode"),
                 quantity=Coalesce(Sum("stock__quantity"), 0),
             )
             .order_by("brand_name", "model")
@@ -341,6 +343,7 @@ class PublicInventoryView(APIView):
                 "model": row["model"],
                 "color": row["colors"],
                 "size": row["sizes"],
+                "barcode": row["barcodes"],
                 "quantity": row["quantity"],
                 "image": row["img"] if "img" in row else None,
             }
