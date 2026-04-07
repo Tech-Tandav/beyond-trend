@@ -3,6 +3,7 @@ from datetime import timedelta
 from django.db.models import Count, DecimalField, ExpressionWrapper, F, Sum
 from django.db.models.functions import TruncDate
 from django.utils import timezone
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -36,6 +37,29 @@ def _get_date_range(request):
         return today.replace(day=1), today
 
 
+@extend_schema(
+    tags=["Sales - Analytics"],
+    summary="Sales analytics dashboard",
+    description=(
+        "Returns sales KPIs over a date range. The range is resolved from the query "
+        "parameters in this order of priority:\n\n"
+        "1. `from_date` + `to_date` (ISO `YYYY-MM-DD`)\n"
+        "2. `period` (one of: `today`, `week`, `month`, `year`)\n"
+        "3. Default: current month\n\n"
+        "The payload includes totals, daily trend, top selling products, and top customers."
+    ),
+    parameters=[
+        OpenApiParameter("from_date", str, description="Start date (YYYY-MM-DD). Used together with `to_date`."),
+        OpenApiParameter("to_date", str, description="End date (YYYY-MM-DD). Used together with `from_date`."),
+        OpenApiParameter(
+            "period",
+            str,
+            description="Preset range. One of `today`, `week`, `month`, `year`.",
+            enum=["today", "week", "month", "year"],
+        ),
+    ],
+    responses={200: OpenApiResponse(description="Sales analytics payload (see description).")},
+)
 class SalesAnalyticsView(APIView):
     """
     GET /api/v1/sales/analytics/

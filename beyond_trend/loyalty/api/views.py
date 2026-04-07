@@ -1,4 +1,11 @@
-from rest_framework import status
+from drf_spectacular.utils import (
+    OpenApiExample,
+    OpenApiResponse,
+    extend_schema,
+    extend_schema_view,
+    inline_serializer,
+)
+from rest_framework import serializers, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -16,6 +23,29 @@ from beyond_trend.loyalty.api.serializers import (
 from beyond_trend.loyalty.api.usecases import RedeemPointsUseCase
 
 
+RedeemResponseSerializer = inline_serializer(
+    name="RedeemPointsResponse",
+    fields={
+        "detail": serializers.CharField(),
+        "customer_id": serializers.UUIDField(),
+        "points_redeemed": serializers.IntegerField(),
+        "remaining_points": serializers.IntegerField(),
+    },
+)
+
+
+@extend_schema_view(
+    list=extend_schema(
+        tags=["Loyalty - Customers"],
+        summary="List loyalty customers",
+        description="Paginated list of loyalty customers. Supports `?search=` on name / email / phone and ordering by `name`, `total_points`, `created_at`.",
+    ),
+    retrieve=extend_schema(tags=["Loyalty - Customers"], summary="Get a customer"),
+    create=extend_schema(tags=["Loyalty - Customers"], summary="Create a customer"),
+    update=extend_schema(tags=["Loyalty - Customers"], summary="Replace a customer"),
+    partial_update=extend_schema(tags=["Loyalty - Customers"], summary="Patch a customer"),
+    destroy=extend_schema(tags=["Loyalty - Customers"], summary="Archive a customer"),
+)
 class CustomerViewSet(BaseModelViewSet):
     serializer_class = CustomerSerializer
     queryset = Customer.objects.all()
@@ -24,6 +54,12 @@ class CustomerViewSet(BaseModelViewSet):
     search_fields = ["name", "email", "phone"]
     ordering_fields = ["name", "total_points", "created_at"]
 
+    @extend_schema(
+        tags=["Loyalty - Customers"],
+        summary="List a customer's transactions",
+        description="Returns the full loyalty point ledger for the given customer.",
+        responses={200: LoyaltyTransactionSerializer(many=True)},
+    )
     @action(detail=True, methods=["get"], url_path="transactions")
     def transactions(self, request, pk=None):
         customer = self.get_object()
@@ -31,6 +67,32 @@ class CustomerViewSet(BaseModelViewSet):
         serializer = LoyaltyTransactionSerializer(txns, many=True, context=self.get_serializer_context())
         return Response(serializer.data)
 
+    @extend_schema(
+        tags=["Loyalty - Customers"],
+        summary="Redeem loyalty points",
+        description=(
+            "Deducts `points` from the customer's `total_points` and writes a "
+            "`LoyaltyTransaction` of type `REDEEM`. Returns `400` if the customer does "
+            "not have enough points to redeem."
+        ),
+        request=RedeemPointsSerializer,
+        responses={
+            200: RedeemResponseSerializer,
+            400: OpenApiResponse(description="Insufficient points."),
+            404: OpenApiResponse(description="Customer not found."),
+        },
+        examples=[
+            OpenApiExample(
+                "Redeem 100 points",
+                value={
+                    "customer_id": "11111111-2222-3333-4444-555555555555",
+                    "points": 100,
+                    "notes": "Birthday discount",
+                },
+                request_only=True,
+            ),
+        ],
+    )
     @action(detail=False, methods=["post"], url_path="redeem")
     def redeem(self, request):
         """Redeem loyalty points for a customer."""
@@ -46,6 +108,14 @@ class CustomerViewSet(BaseModelViewSet):
         return Response(use_case.execute(), status=status.HTTP_200_OK)
 
 
+@extend_schema_view(
+    list=extend_schema(
+        tags=["Loyalty - Transactions"],
+        summary="List loyalty transactions",
+        description="Read-only ledger of every point movement (`EARN`, `REDEEM`, `ADJUST`).",
+    ),
+    retrieve=extend_schema(tags=["Loyalty - Transactions"], summary="Get a transaction"),
+)
 class LoyaltyTransactionViewSet(BaseModelViewSet):
     serializer_class = LoyaltyTransactionSerializer
     queryset = LoyaltyTransaction.objects.select_related("customer", "sale").all()
@@ -55,6 +125,19 @@ class LoyaltyTransactionViewSet(BaseModelViewSet):
     ordering_fields = ["created_at", "points", "type"]
 
 
+@extend_schema_view(
+    list=extend_schema(
+        tags=["Loyalty - Settings"],
+        summary="List loyalty settings",
+        description="Loyalty settings are a singleton — this list always contains zero or one row. Prefer `/settings/current/`.",
+    ),
+    retrieve=extend_schema(tags=["Loyalty - Settings"], summary="Get loyalty settings"),
+    partial_update=extend_schema(
+        tags=["Loyalty - Settings"],
+        summary="Update loyalty settings",
+        description="Update the points-per-100-NPR ratio or the per-point NPR value.",
+    ),
+)
 class LoyaltySettingsViewSet(BaseModelViewSet):
     serializer_class = LoyaltySettingsSerializer
     queryset = LoyaltySettings.objects.all()
@@ -70,6 +153,15 @@ class LoyaltySettingsViewSet(BaseModelViewSet):
         self.check_object_permissions(self.request, obj)
         return obj
 
+    @extend_schema(
+        tags=["Loyalty - Settings"],
+        summary="Get current loyalty settings",
+        description="Returns the active singleton `LoyaltySettings` row.",
+        responses={
+            200: LoyaltySettingsSerializer,
+            404: OpenApiResponse(description="Loyalty settings not configured."),
+        },
+    )
     @action(detail=False, methods=["get"], url_path="current")
     def current(self, request):
         """Get the current loyalty settings (singleton)."""

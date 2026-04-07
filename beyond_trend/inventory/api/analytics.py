@@ -9,6 +9,7 @@ from django.db.models import (
     Value,
 )
 from django.db.models.functions import Coalesce
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -16,6 +17,20 @@ from rest_framework.views import APIView
 from beyond_trend.inventory.models import InventoryLog, Product
 
 
+@extend_schema(
+    tags=["Inventory - Analytics"],
+    summary="Inventory snapshot",
+    description=(
+        "Returns a snapshot of the current inventory state, including:\n"
+        "- **summary**: total products, units, stock value, low-stock and out-of-stock counts\n"
+        "- **stock_by_brand**: per-brand units and stock value\n"
+        "- **top_stocked_products**: top 10 variants by quantity\n"
+        "- **low_stock_items**: variants below their per-product threshold\n"
+        "- **out_of_stock_items**: variants with zero stock\n"
+        "- **recent_activity**: last 10 stock movements"
+    ),
+    responses={200: OpenApiResponse(description="Inventory analytics payload (see description).")},
+)
 class InventoryAnalyticsView(APIView):
     """
     GET /api/v1/inventory/analytics/
