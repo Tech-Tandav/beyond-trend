@@ -1,81 +1,136 @@
-from django.db.models import Count, DecimalField, ExpressionWrapper, F, Sum
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from django.db.models import (
+    Count,
+    DecimalField,
+    ExpressionWrapper,
+    F,
+    IntegerField,
+    Q,
+    Sum,
+    Value,
+)
+from django.db.models.functions import Coalesce
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from beyond_trend.inventory.models import Product
+from beyond_trend.inventory.models import InventoryLog, Product
 
 
 class InventoryAnalyticsView(APIView):
     """
     GET /api/v1/inventory/analytics/
 
-    Returns a snapshot of the current inventory state for ShoeProduct.
-    No date filtering — stock levels are always current.
+    Returns a snapshot of the current inventory state.
+    Stock levels come from the related Stock model and low-stock thresholds
+    are evaluated per-product.
     """
 
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        qs = Product.objects.all()
-
+        qty = Coalesce(F("stock__quantity"), Value(0), output_field=IntegerField())
         stock_value_expr = ExpressionWrapper(
-            F("selling_price") * F("quantity"),
+            F("selling_price") * qty,
             output_field=DecimalField(max_digits=14, decimal_places=2),
         )
 
-        # --- Summary ---
-        agg = qs.annotate(stock_value=stock_value_expr).aggregate(
-            total_products=Count("id"),
-            total_units=Sum("quantity"),
-            total_stock_value=Sum("stock_value"),
+        base_qs = Product.objects.select_related("brand", "stock").annotate(
+            qty=qty,
+            stock_value=stock_value_expr,
         )
 
-        total_products = agg["total_products"] or 0
-        total_units = agg["total_units"] or 0
-        total_stock_value = agg["total_stock_value"] or 0
-
-        low_stock_count = qs.filter(quantity__gt=0, quantity__lte=5).count()
-        out_of_stock_count = qs.filter(quantity=0).count()
+        # --- Summary (single aggregate query) ---
+        summary_agg = base_qs.aggregate(
+            total_products=Count("id"),
+            total_units=Coalesce(Sum("qty"), Value(0)),
+            total_stock_value=Coalesce(
+                Sum("stock_value"),
+                Value(0),
+                output_field=DecimalField(max_digits=14, decimal_places=2),
+            ),
+            low_stock_count=Count(
+                "id",
+                filter=Q(qty__gt=0, qty__lte=F("low_stock_threshold")),
+            ),
+            out_of_stock_count=Count("id", filter=Q(qty=0)),
+        )
 
         # --- Stock by brand ---
-        stock_by_brand = (
-            qs.annotate(stock_value=stock_value_expr)
-            .values("brand__name")
+        stock_by_brand = list(
+            base_qs.values("brand__name")
             .annotate(
                 products=Count("id"),
-                units=Sum("quantity"),
-                stock_value=Sum(stock_value_expr),
+                units=Coalesce(Sum("qty"), Value(0)),
+                stock_value=Coalesce(
+                    Sum("stock_value"),
+                    Value(0),
+                    output_field=DecimalField(max_digits=14, decimal_places=2),
+                ),
             )
             .order_by("-stock_value")
         )
 
         # --- Top stocked products ---
-        top_stocked = (
-            qs.annotate(stock_value=stock_value_expr)
-            .values("barcode", "brand__name", "model", "size", "color", "quantity", "selling_price", "stock_value")
-            .order_by("-quantity")[:10]
+        top_stocked = list(
+            base_qs.order_by("-qty").values(
+                "barcode",
+                "brand__name",
+                "model",
+                "size",
+                "color",
+                "qty",
+                "selling_price",
+                "stock_value",
+            )[:10]
         )
 
-        # --- Low stock items (quantity 1–5) ---
-        low_stock_items = qs.filter(quantity__gt=0, quantity__lte=5).values(
-            "barcode", "brand__name", "model", "size", "color", "quantity", "selling_price"
-        ).order_by("quantity")
+        # --- Low stock items (per-product threshold) ---
+        low_stock_items = list(
+            base_qs.filter(qty__gt=0, qty__lte=F("low_stock_threshold"))
+            .order_by("qty")
+            .values(
+                "barcode",
+                "brand__name",
+                "model",
+                "size",
+                "color",
+                "qty",
+                "low_stock_threshold",
+                "selling_price",
+            )
+        )
 
         # --- Out of stock items ---
-        out_of_stock_items = qs.filter(quantity=0).values(
-            "barcode", "brand__name", "model", "size", "color", "selling_price"
+        out_of_stock_items = list(
+            base_qs.filter(qty=0).values(
+                "barcode",
+                "brand__name",
+                "model",
+                "size",
+                "color",
+                "selling_price",
+            )
+        )
+
+        # --- Recent activity (last 10 inventory movements) ---
+        recent_activity = list(
+            InventoryLog.objects.select_related("variant__brand", "staff")
+            .order_by("-created_at")
+            .values(
+                "action",
+                "quantity",
+                "notes",
+                "created_at",
+                "variant__barcode",
+                "variant__brand__name",
+                "variant__model",
+                "staff__username",
+            )[:10]
         )
 
         return Response(
             {
-                "summary": {
-                    "total_products": total_products,
-                    "total_units": total_units,
-                    "total_stock_value": total_stock_value,
-                    "low_stock_count": low_stock_count,
-                    "out_of_stock_count": out_of_stock_count,
-                },
+                "summary": summary_agg,
                 "stock_by_brand": [
                     {
                         "brand_name": row["brand__name"],
@@ -92,13 +147,48 @@ class InventoryAnalyticsView(APIView):
                         "model": row["model"],
                         "size": row["size"],
                         "color": row["color"],
-                        "quantity": row["quantity"],
+                        "quantity": row["qty"],
                         "selling_price": row["selling_price"],
                         "stock_value": row["stock_value"],
                     }
                     for row in top_stocked
                 ],
-                "low_stock_items": list(low_stock_items),
-                "out_of_stock_items": list(out_of_stock_items),
+                "low_stock_items": [
+                    {
+                        "barcode": row["barcode"],
+                        "brand_name": row["brand__name"],
+                        "model": row["model"],
+                        "size": row["size"],
+                        "color": row["color"],
+                        "quantity": row["qty"],
+                        "low_stock_threshold": row["low_stock_threshold"],
+                        "selling_price": row["selling_price"],
+                    }
+                    for row in low_stock_items
+                ],
+                "out_of_stock_items": [
+                    {
+                        "barcode": row["barcode"],
+                        "brand_name": row["brand__name"],
+                        "model": row["model"],
+                        "size": row["size"],
+                        "color": row["color"],
+                        "selling_price": row["selling_price"],
+                    }
+                    for row in out_of_stock_items
+                ],
+                "recent_activity": [
+                    {
+                        "action": row["action"],
+                        "quantity": row["quantity"],
+                        "notes": row["notes"],
+                        "created_at": row["created_at"],
+                        "barcode": row["variant__barcode"],
+                        "brand_name": row["variant__brand__name"],
+                        "model": row["variant__model"],
+                        "staff": row["staff__username"],
+                    }
+                    for row in recent_activity
+                ],
             }
         )
