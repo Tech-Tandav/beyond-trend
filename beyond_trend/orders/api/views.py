@@ -94,7 +94,7 @@ class OrderCreateAPIView(generics.CreateAPIView):
 
         use_case = CreateOrderUseCase(
             data=serializer.validated_data,
-            staff=request.user,
+            staff=request.user if request.user.is_authenticated else None,
         )
         order = use_case.execute()
         return Response(
