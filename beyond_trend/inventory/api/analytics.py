@@ -129,16 +129,16 @@ class InventoryAnalyticsView(APIView):
 
         # --- Recent activity (last 10 inventory movements) ---
         recent_activity = list(
-            InventoryLog.objects.select_related("variant__brand", "staff")
+            InventoryLog.objects.select_related("product__brand", "staff")
             .order_by("-created_at")
             .values(
                 "action",
                 "quantity",
                 "notes",
                 "created_at",
-                "variant__barcode",
-                "variant__brand__name",
-                "variant__model",
+                "product__barcode",
+                "product__brand__name",
+                "product__model",
                 "staff__username",
             )[:10]
         )
@@ -198,9 +198,9 @@ class InventoryAnalyticsView(APIView):
                         "quantity": row["quantity"],
                         "notes": row["notes"],
                         "created_at": row["created_at"],
-                        "barcode": row["variant__barcode"],
-                        "brand_name": row["variant__brand__name"],
-                        "model": row["variant__model"],
+                        "barcode": row["product__barcode"],
+                        "brand_name": row["product__brand__name"],
+                        "model": row["product__model"],
                         "staff": row["staff__username"],
                     }
                     for row in recent_activity

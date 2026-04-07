@@ -4,7 +4,9 @@
       "Bash(git add:*)",
       "Bash(git commit -m ':*)",
       "Bash(git push:*)",
-      "Bash(python manage.py makemigrations orders)"
+      "Bash(python manage.py makemigrations orders)",
+      "Bash(python -c \"import django, os; os.environ.setdefault\\('DJANGO_SETTINGS_MODULE','config.settings.local'\\); django.setup\\(\\); from beyond_trend.sales.api.analytics import SalesAnalyticsView; from beyond_trend.inventory.api.analytics import InventoryAnalyticsView; print\\('ok'\\)\")",
+      "Bash(python -m py_compile beyond_trend/sales/api/analytics.py beyond_trend/inventory/api/analytics.py beyond_trend/inventory/models.py beyond_trend/sales/api/usecases.py)"
     ]
   }
 }

@@ -118,4 +118,4 @@ class InventoryLog(BaseModel):
         ordering = ["-created_at"]
 
     def __str__(self):
-        return f"{self.get_action_display()} | {self.variant} | {self.quantity}"
+        return f"{self.get_action_display()} | {self.product} | {self.quantity}"
