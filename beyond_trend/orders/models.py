@@ -51,7 +51,7 @@ class OrderItem(BaseModel):
         on_delete=models.CASCADE,
         related_name="items",
     )
-    variant = models.ForeignKey(
+    product = models.ForeignKey(
         "inventory.Product",
         on_delete=models.CASCADE,
         related_name="order_items",
@@ -60,7 +60,7 @@ class OrderItem(BaseModel):
     price = models.DecimalField(_("Price"), max_digits=10, decimal_places=2)
 
     def __str__(self):
-        return f"{self.variant} x{self.quantity}"
+        return f"{self.product} x{self.quantity}"
 
     @property
     def total(self):

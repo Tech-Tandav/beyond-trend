@@ -25,7 +25,7 @@ class CreateOrderUseCase(BaseUseCase):
         self._data = data
         self._staff = staff
         self._loyalty_customer = None
-        self._items_to_create = []  # list of (variant, quantity, price)
+        self._items_to_create = []  # list of (product, quantity, price)
         self._total_amount = 0
 
     def is_valid(self):
@@ -37,20 +37,20 @@ class CreateOrderUseCase(BaseUseCase):
                 raise NotFound("Loyalty customer not found.")
 
         for item in self._data["items"]:
-            variant_id = item["variant_id"]
+            product_id = item["product_id"]
             quantity = item["quantity"]
             try:
-                variant = Product.objects.get(id=variant_id)
+                product = Product.objects.get(id=product_id)
             except Product.DoesNotExist:
-                raise NotFound(f"Product {variant_id} not found.")
+                raise NotFound(f"Product {product_id} not found.")
 
-            if variant.selling_price is None:
+            if product.selling_price is None:
                 raise ValidationError(
-                    {"detail": f"Product {variant} has no selling price set."}
+                    {"detail": f"Product {product} has no selling price set."}
                 )
 
-            self._total_amount += variant.selling_price * quantity
-            self._items_to_create.append((variant, quantity, variant.selling_price))
+            self._total_amount += product.selling_price * quantity
+            self._items_to_create.append((product, quantity, product.selling_price))
 
     @transaction.atomic
     def execute(self):
@@ -59,18 +59,18 @@ class CreateOrderUseCase(BaseUseCase):
 
     def _factory(self):
         # Lock + verify stock atomically so two concurrent orders can't oversell.
-        for variant, quantity, _ in self._items_to_create:
+        for product, quantity, _ in self._items_to_create:
             try:
-                stock = Stock.objects.select_for_update().get(product=variant)
+                stock = Stock.objects.select_for_update().get(product=product)
             except Stock.DoesNotExist:
                 raise ValidationError(
-                    {"detail": f"No stock record for {variant}."}
+                    {"detail": f"No stock record for {product}."}
                 )
             if stock.quantity < quantity:
                 raise ValidationError(
                     {
                         "detail": (
-                            f"Insufficient stock for {variant}. "
+                            f"Insufficient stock for {product}. "
                             f"Requested {quantity}, available {stock.quantity}."
                         )
                     }
@@ -87,15 +87,15 @@ class CreateOrderUseCase(BaseUseCase):
             loyalty_customer=self._loyalty_customer,
         )
 
-        for variant, quantity, price in self._items_to_create:
+        for product, quantity, price in self._items_to_create:
             OrderItem.objects.create(
                 order=order,
-                variant=variant,
+                product=product,
                 quantity=quantity,
                 price=price,
             )
             InventoryLog.objects.create(
-                variant=variant,
+                variant=product,
                 action=InventoryLog.CHECK_OUT,
                 quantity=-quantity,
                 staff=self._staff,
@@ -138,16 +138,16 @@ class UpdateOrderStatusUseCase(BaseUseCase):
 
         # If we're cancelling, restore stock for every line item exactly once.
         if self._new_status == Order.CANCELLED and previous_status != Order.CANCELLED:
-            items = self._order.items.select_related("variant").all()
+            items = self._order.items.select_related("product").all()
             for item in items:
                 stock, _ = Stock.objects.select_for_update().get_or_create(
-                    product=item.variant
+                    product=item.product
                 )
                 stock.quantity += item.quantity
                 stock.save(update_fields=["quantity"])
 
                 InventoryLog.objects.create(
-                    variant=item.variant,
+                    variant=item.product,
                     action=InventoryLog.CHECK_IN,
                     quantity=item.quantity,
                     staff=self._staff,

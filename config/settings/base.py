@@ -381,10 +381,58 @@ CORS_URLS_REGEX = r"^/api/.*$"
 # See more configuration options at https://drf-spectacular.readthedocs.io/en/latest/settings.html#settings
 SPECTACULAR_SETTINGS = {
     "TITLE": "Beyond Trend API",
-    "DESCRIPTION": "Documentation of API endpoints of Beyond Trend",
+    "DESCRIPTION": (
+        "REST API for the Beyond Trend shoe shop platform.\n\n"
+        "This API powers inventory management, point-of-sale checkout, "
+        "online orders & pre-orders, and the customer loyalty program.\n\n"
+        "## Authentication\n"
+        "Most endpoints require a token. Obtain one by `POST /api/auth-token/` "
+        "with `username` + `password`, then send `Authorization: Token <key>` "
+        "on every subsequent request.\n\n"
+        "## Conventions\n"
+        "- All list endpoints support `?search=`, `?ordering=`, and `?page=` query params.\n"
+        "- All write endpoints return the full updated resource.\n"
+        "- Errors follow the DRF format: `{ \"detail\": \"...\" }` or field-level errors."
+    ),
     "VERSION": "1.0.0",
-    "SERVE_PERMISSIONS": ["rest_framework.permissions.IsAdminUser"],
+    "SERVE_PERMISSIONS": ["rest_framework.permissions.AllowAny"],
     "SCHEMA_PATH_PREFIX": "/api/",
+    "COMPONENT_SPLIT_REQUEST": True,
+    "SORT_OPERATIONS": False,
+    "SCHEMA_COERCE_PATH_PK_SUFFIX": True,
+    "SERVE_INCLUDE_SCHEMA": False,
+    "TAGS": [
+        {"name": "Auth", "description": "Login and token management."},
+        {"name": "Users", "description": "User account endpoints."},
+        {"name": "Inventory - Vendors", "description": "Suppliers / vendors of stock."},
+        {"name": "Inventory - Brands", "description": "Brands sold in the shop."},
+        {"name": "Inventory - Products", "description": "Product catalog (each row is a size/color variant)."},
+        {"name": "Inventory - Stock", "description": "Per-variant stock quantities."},
+        {"name": "Inventory - Logs", "description": "Audit trail of stock movements."},
+        {"name": "Inventory - Operations", "description": "Stock check-in / check-out operations."},
+        {"name": "Inventory - Analytics", "description": "Inventory dashboards and KPIs."},
+        {"name": "Inventory - Public", "description": "Public, unauthenticated catalog endpoints."},
+        {"name": "Orders", "description": "Online customer orders."},
+        {"name": "Pre-Orders", "description": "Customer pre-orders for unavailable items."},
+        {"name": "Sales", "description": "POS sales and checkout."},
+        {"name": "Sales - Analytics", "description": "Sales dashboards and KPIs."},
+        {"name": "Loyalty - Customers", "description": "Loyalty program customers."},
+        {"name": "Loyalty - Transactions", "description": "Loyalty point ledger."},
+        {"name": "Loyalty - Settings", "description": "Loyalty program configuration."},
+    ],
+    "SWAGGER_UI_SETTINGS": {
+        "deepLinking": True,
+        "displayOperationId": False,
+        "defaultModelsExpandDepth": 1,
+        "defaultModelExpandDepth": 2,
+        "displayRequestDuration": True,
+        "filter": True,
+        "persistAuthorization": True,
+        "tagsSorter": "alpha",
+        "operationsSorter": "method",
+    },
+    "CONTACT": {"name": "Beyond Trend Engineering"},
+    "LICENSE": {"name": "Proprietary"},
 }
 # Your stuff...
 # ------------------------------------------------------------------------------

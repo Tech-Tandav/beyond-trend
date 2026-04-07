@@ -8,7 +8,7 @@ from beyond_trend.orders.models import Order, OrderItem, PreOrder
 class OrderItemInline(admin.TabularInline):
     model = OrderItem
     extra = 0
-    fields = ["variant", "quantity", "price"]
+    fields = ["product", "quantity", "price"]
 
 
 @admin.register(Order)

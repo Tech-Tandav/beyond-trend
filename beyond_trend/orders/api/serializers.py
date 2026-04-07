@@ -10,7 +10,7 @@ class OrderItemSerializer(BaseModelSerializer):
 
     class Meta(BaseModelSerializer.Meta):
         model = OrderItem
-        fields = ["id", "variant", "quantity", "price", "total"]
+        fields = ["id", "product", "quantity", "price", "total"]
         read_only_fields = ["id", "total"]
 
 
@@ -36,7 +36,7 @@ class OrderSerializer(BaseModelSerializer):
 
 
 class CreateOrderItemSerializer(serializers.Serializer):
-    variant_id = serializers.UUIDField()
+    product_id = serializers.UUIDField()
     quantity = serializers.IntegerField(min_value=1)
 
 
