@@ -58,18 +58,21 @@ class ProductRetrieveView(generics.RetrieveAPIView):
     serializer_class = ProductSerializer
     queryset = Product.objects.select_related("brand").all()
     permission_classes = [AllowAny]
+    lookup_field = "slug"
 
 
 class ProductUpdateView(generics.UpdateAPIView):
     serializer_class = ProductSerializer
     queryset = Product.objects.select_related("brand").all()
     permission_classes = [IsAuthenticated]
+    lookup_field = "slug"
 
 
 class ProductDestroyView(generics.DestroyAPIView):
     serializer_class = ProductSerializer
     queryset = Product.objects.select_related("brand").all()
     permission_classes = [IsAuthenticated]
+    lookup_field = "slug"
 
 
 class ProductCheckInView(APIView):
