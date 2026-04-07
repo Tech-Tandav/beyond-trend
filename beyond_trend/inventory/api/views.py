@@ -120,7 +120,7 @@ class ProductRetrieveView(generics.RetrieveAPIView):
     serializer_class = ProductSerializer
     queryset = Product.objects.select_related("brand").all()
     permission_classes = [AllowAny]
-    lookup_field = "slug"
+    lookup_field = "barcode"
 
 
 @extend_schema(

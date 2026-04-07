@@ -35,7 +35,7 @@ urlpatterns = [
     path("products/create/", ProductCreateView.as_view(), name="product-create"),
     path("products/check-in/", ProductCheckInView.as_view(), name="product-check-in"),
     path("products/check-out/", ProductCheckOutView.as_view(), name="product-check-out"),
-    path("products/<slug:slug>/", ProductRetrieveView.as_view(), name="product-detail"),
+    path("products/<str:barcode>/", ProductRetrieveView.as_view(), name="product-detail"),
     path("products/<slug:slug>/update/", ProductUpdateView.as_view(), name="product-update"),
     path("products/<slug:slug>/delete/", ProductDestroyView.as_view(), name="product-delete"),
 ]
