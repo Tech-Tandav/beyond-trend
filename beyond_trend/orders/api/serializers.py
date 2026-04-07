@@ -7,11 +7,12 @@ from beyond_trend.orders.models import Order, OrderItem, PreOrder
 
 class OrderItemSerializer(BaseModelSerializer):
     total = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
+    product_barcode = serializers.CharField(source="product.barcode", read_only=True)
 
     class Meta(BaseModelSerializer.Meta):
         model = OrderItem
-        fields = ["id", "product", "quantity", "price", "total"]
-        read_only_fields = ["id", "total"]
+        fields = ["id", "product", "quantity", "price", "total", "product_barcode"]
+        read_only_fields = ["id", "total", "product_barcode"]
 
 
 class OrderSerializer(BaseModelSerializer):
