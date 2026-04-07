@@ -23,17 +23,22 @@ from beyond_trend.orders.api.usecases import (
 
 class OrderViewSet(BaseModelViewSet):
     serializer_class = OrderSerializer
-    queryset = Order.objects.prefetch_related("items").all()
+    queryset = Order.objects.prefetch_related("items__variant__brand").all()
     permission_classes = [IsAuthenticated]
     filterset_class = OrderFilter
     search_fields = ["customer_name", "email", "phone"]
     ordering_fields = ["created_at", "total_amount", "status"]
+    # Orders are immutable once created — only the status action can change them.
+    http_method_names = ["get", "post", "head", "options"]
 
     def create(self, request, *args, **kwargs):
         serializer = CreateOrderSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        use_case = CreateOrderUseCase(data=serializer.validated_data)
+        use_case = CreateOrderUseCase(
+            data=serializer.validated_data,
+            staff=request.user,
+        )
         order = use_case.execute()
         return Response(
             OrderSerializer(order, context={"request": request}).data,
@@ -46,7 +51,11 @@ class OrderViewSet(BaseModelViewSet):
         serializer = UpdateOrderStatusSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        use_case = UpdateOrderStatusUseCase(order=order, new_status=serializer.validated_data["status"])
+        use_case = UpdateOrderStatusUseCase(
+            order=order,
+            new_status=serializer.validated_data["status"],
+            staff=request.user,
+        )
         updated_order = use_case.execute()
         return Response(OrderSerializer(updated_order, context=self.get_serializer_context()).data)
 
