@@ -180,39 +180,3 @@ class CheckoutUseCase(BaseUseCase):
             sale.save(update_fields=["loyalty_points_earned"])
 
         return sale
-
-
-class ShoeCheckoutUseCase(CheckoutUseCase):
-    def __init__(self, data, staff):
-        self._data = data
-        self._staff = staff
-        self._product = None
-
-    def is_valid(self):
-        try:
-            self._product = Product.objects.get(barcode=self._data["bar_code"])
-        except Product.DoesNotExist:
-            raise NotFound("Shoe product not found.")
-        if self._product.quantity < self._data["quantity"]:
-            raise ValidationError(
-                {"detail": f"Insufficient stock. Available: {self._product.quantity}, Requested: {self._data['quantity']}"}
-            )
-
-    @transaction.atomic
-    def execute(self):
-        self.is_valid()
-        return self._factory()
-
-    def _factory(self):
-        sale = Sale.objects.create(
-            staff=self._staff,
-            quantity=self._data["quantity"],
-            selling_price=self._data["selling_price"],
-            bar_code=self._data["bar_code"],
-            phone_number=self._data.get("phone_number", ""),
-        )
-
-        self._shoe_product.quantity -= self._data["quantity"]
-        self._shoe_product.save(update_fields=["quantity"])
-
-        return sale
