@@ -1,7 +1,8 @@
-from rest_framework import status
+from rest_framework import generics, status
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from beyond_trend.core.viewsets import BaseModelViewSet
 
@@ -21,18 +22,27 @@ from beyond_trend.orders.api.usecases import (
 )
 
 
-class OrderViewSet(BaseModelViewSet):
+class OrderListAPIView(generics.ListAPIView):
     serializer_class = OrderSerializer
     queryset = Order.objects.prefetch_related("items__variant__brand").all()
     permission_classes = [IsAuthenticated]
     filterset_class = OrderFilter
     search_fields = ["customer_name", "email", "phone"]
     ordering_fields = ["created_at", "total_amount", "status"]
-    # Orders are immutable once created — only the status action can change them.
-    http_method_names = ["get", "post", "head", "options"]
+
+
+class OrderRetrieveAPIView(generics.RetrieveAPIView):
+    serializer_class = OrderSerializer
+    queryset = Order.objects.prefetch_related("items__variant__brand").all()
+    permission_classes = [IsAuthenticated]
+
+
+class OrderCreateAPIView(generics.CreateAPIView):
+    serializer_class = CreateOrderSerializer
+    permission_classes = [AllowAny]
 
     def create(self, request, *args, **kwargs):
-        serializer = CreateOrderSerializer(data=request.data)
+        serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         use_case = CreateOrderUseCase(
@@ -45,9 +55,12 @@ class OrderViewSet(BaseModelViewSet):
             status=status.HTTP_201_CREATED,
         )
 
-    @action(detail=True, methods=["patch"], url_path="status")
-    def update_status(self, request, pk=None):
-        order = self.get_object()
+
+class OrderStatusUpdateAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, pk):
+        order = generics.get_object_or_404(Order, pk=pk)
         serializer = UpdateOrderStatusSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -57,7 +70,9 @@ class OrderViewSet(BaseModelViewSet):
             staff=request.user,
         )
         updated_order = use_case.execute()
-        return Response(OrderSerializer(updated_order, context=self.get_serializer_context()).data)
+        return Response(
+            OrderSerializer(updated_order, context={"request": request}).data
+        )
 
 
 class PreOrderViewSet(BaseModelViewSet):
