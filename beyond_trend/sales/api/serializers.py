@@ -50,16 +50,19 @@ class CheckoutItemSerializer(serializers.Serializer):
 
 class CheckoutSerializer(serializers.Serializer):
     """Full POS checkout — creates a Sale with items, reduces stock, awards loyalty points."""
-    items = CheckoutItemSerializer(many=True)
+    items = CheckoutItemSerializer(many=True, required=False)
+    order_id = serializers.UUIDField(required=False, allow_null=True)
     customer_id = serializers.UUIDField(required=False, allow_null=True)
     loyalty_points_used = serializers.IntegerField(min_value=0, default=0)
     notes = serializers.CharField(required=False, allow_blank=True, default="")
     phone_number = serializers.CharField(max_length=20, required=False, allow_blank=True)
 
-    def validate_items(self, value):
-        if not value:
-            raise serializers.ValidationError("At least one item is required.")
-        return value
+    def validate(self, attrs):
+        if not attrs.get("order_id") and not attrs.get("items"):
+            raise serializers.ValidationError(
+                "Provide either `order_id` or `items`."
+            )
+        return attrs
 
 
 class ShoeCheckoutSerializer(serializers.Serializer):

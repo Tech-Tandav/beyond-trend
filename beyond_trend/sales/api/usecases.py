@@ -6,6 +6,7 @@ from rest_framework.exceptions import NotFound, ValidationError
 from beyond_trend.core.usecases import BaseUseCase
 from beyond_trend.inventory.models import InventoryLog, Product, Stock
 from beyond_trend.loyalty.models import Customer, LoyaltySettings, LoyaltyTransaction
+from beyond_trend.orders.models import Order
 
 from beyond_trend.sales.models import Sale, SaleItem
 
@@ -16,6 +17,8 @@ class CheckoutUseCase(BaseUseCase):
         self._data = data
         self._staff = staff
         self._customer = None
+        self._order = None
+        self._items = []  # normalized list of {"product": Product, "quantity": int, "selling_price": Decimal}
         self._products = {}
         self._stocks = {}
         self._loyalty_settings = None
@@ -32,28 +35,58 @@ class CheckoutUseCase(BaseUseCase):
             except Customer.DoesNotExist:
                 raise NotFound("Customer not found.")
 
-        for item in self._data["items"]:
-            vid = item["product_id"]
+        order_id = self._data.get("order_id")
+        if order_id:
             try:
-                product = Product.objects.get(id=vid)
-            except Product.DoesNotExist:
-                raise NotFound(f"product {vid} not found.")
-            try:
-                stock = Stock.objects.get(product=product)
-            except Stock.DoesNotExist:
-                raise ValidationError({"detail": f"No stock for product: {product}"})
-            if stock.quantity < item["quantity"]:
+                self._order = Order.objects.prefetch_related("items__product").get(id=order_id)
+            except Order.DoesNotExist:
+                raise NotFound(f"Order {order_id} not found.")
+            if self._order.status in (Order.DELIVERED, Order.CANCELLED):
                 raise ValidationError(
-                    {
-                        "detail": f"Insufficient stock for {product}. "
-                        f"Available: {stock.quantity}, Requested: {item['quantity']}"
-                    }
+                    {"detail": f"Cannot checkout an order in '{self._order.status}' status."}
                 )
-            self._products[str(vid)] = product
-            self._stocks[str(vid)] = stock
+            if not self._order.items.exists():
+                raise ValidationError({"detail": "Order has no items to checkout."})
+
+            # Stock was already decremented when the order was created — don't re-check.
+            for order_item in self._order.items.all():
+                self._items.append({
+                    "product": order_item.product,
+                    "quantity": order_item.quantity,
+                    "selling_price": order_item.price,
+                })
+                self._products[str(order_item.product_id)] = order_item.product
+
+            if self._customer is None and self._order.loyalty_customer_id:
+                self._customer = self._order.loyalty_customer
+        else:
+            for item in self._data["items"]:
+                vid = item["product_id"]
+                try:
+                    product = Product.objects.get(id=vid)
+                except Product.DoesNotExist:
+                    raise NotFound(f"product {vid} not found.")
+                try:
+                    stock = Stock.objects.get(product=product)
+                except Stock.DoesNotExist:
+                    raise ValidationError({"detail": f"No stock for product: {product}"})
+                if stock.quantity < item["quantity"]:
+                    raise ValidationError(
+                        {
+                            "detail": f"Insufficient stock for {product}. "
+                            f"Available: {stock.quantity}, Requested: {item['quantity']}"
+                        }
+                    )
+                self._products[str(vid)] = product
+                self._stocks[str(vid)] = stock
+                self._items.append({
+                    "product": product,
+                    "quantity": item["quantity"],
+                    "selling_price": item["selling_price"],
+                })
 
         self._subtotal = sum(
-            item["quantity"] * item["selling_price"] for item in self._data["items"]
+            item["quantity"] * item["selling_price"] for item in self._items
         )
 
         if self._loyalty_points_used > 0 and self._customer:
@@ -84,10 +117,8 @@ class CheckoutUseCase(BaseUseCase):
             notes=self._data.get("notes", ""),
         )
 
-        for item in self._data["items"]:
-            vid = str(item["product_id"])
-            product = self._products[vid]
-            stock = self._stocks[vid]
+        for item in self._items:
+            product = item["product"]
 
             SaleItem.objects.create(
                 sale=sale,
@@ -96,16 +127,26 @@ class CheckoutUseCase(BaseUseCase):
                 selling_price=item["selling_price"],
             )
 
-            stock.quantity -= item["quantity"]
-            stock.save(update_fields=["quantity"])
+            # Stock + inventory log were already handled at order creation time;
+            # only decrement here for direct (non-order) checkouts.
+            if self._order is None:
+                stock = self._stocks[str(product.id)]
+                stock.quantity -= item["quantity"]
+                stock.save(update_fields=["quantity"])
 
-            InventoryLog.objects.create(
-                product=product,
-                action=InventoryLog.CHECK_OUT,
-                quantity=-item["quantity"],
-                staff=self._staff,
-                notes=f"Sale #{str(sale.id)[:8]}",
-            )
+                InventoryLog.objects.create(
+                    product=product,
+                    action=InventoryLog.CHECK_OUT,
+                    quantity=-item["quantity"],
+                    staff=self._staff,
+                    notes=f"Sale #{str(sale.id)[:8]}",
+                )
+
+        if self._order is not None:
+            # Items have moved to the Sale — clear them from the order and mark it delivered.
+            self._order.items.all().delete()
+            self._order.status = Order.DELIVERED
+            self._order.save(update_fields=["status"])
 
         if self._customer:
             if not self._loyalty_settings:
