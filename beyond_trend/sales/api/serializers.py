@@ -54,6 +54,7 @@ class CheckoutSerializer(serializers.Serializer):
     order_id = serializers.UUIDField(required=False, allow_null=True)
     phone_number = serializers.CharField(max_length=20, required=False, allow_blank=True)
     loyalty_points_used = serializers.IntegerField(min_value=0, default=0)
+    redeem = serializers.BooleanField(default=False)
     notes = serializers.CharField(required=False, allow_blank=True, default="")
 
     def validate(self, attrs):

@@ -5,6 +5,8 @@ from beyond_trend.core.models import BaseModel
 
 
 class Customer(BaseModel):
+    REDEEM_THRESHOLD = 500
+
     name = models.CharField(_("Name"), max_length=255)
     email = models.EmailField(_("Email"), unique=True)
     phone = models.CharField(_("Phone"), max_length=20, blank=True)
@@ -15,6 +17,10 @@ class Customer(BaseModel):
 
     def __str__(self):
         return f"{self.name} ({self.email})"
+
+    @property
+    def is_redeemable(self):
+        return self.total_points >= self.REDEEM_THRESHOLD
 
 
 class LoyaltyTransaction(BaseModel):

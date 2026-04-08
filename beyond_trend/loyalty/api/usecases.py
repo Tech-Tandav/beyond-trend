@@ -20,6 +20,12 @@ class RedeemPointsUseCase(BaseUseCase):
         except Customer.DoesNotExist:
             raise NotFound("Customer not found.")
 
+        if not self._customer.is_redeemable:
+            raise ValidationError(
+                {"detail": f"Customer needs at least {Customer.REDEEM_THRESHOLD} points to redeem. "
+                           f"Available: {self._customer.total_points}"}
+            )
+
         if self._customer.total_points < self._points:
             raise ValidationError(
                 {"detail": f"Insufficient points. Available: {self._customer.total_points}"}
