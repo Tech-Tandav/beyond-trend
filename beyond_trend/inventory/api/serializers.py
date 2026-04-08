@@ -31,6 +31,10 @@ class StockSerializer(BaseModelSerializer):
 
 
 class ProductSerializer(BaseModelSerializer):
+    selling_price = serializers.DecimalField(
+        max_digits=10, decimal_places=2, required=False, allow_null=True
+    )
+
     class Meta(BaseModelSerializer.Meta):
         model = Product
         fields = [

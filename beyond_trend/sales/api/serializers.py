@@ -44,12 +44,17 @@ class SaleSerializer(BaseModelSerializer):
 
 class CheckoutItemSerializer(serializers.Serializer):
     product_id = serializers.UUIDField()
-    quantity = serializers.IntegerField(min_value=1)
+    quantity = serializers.IntegerField(min_value=1, required=False)
     selling_price = serializers.DecimalField(max_digits=10, decimal_places=2)
 
 
 class CheckoutSerializer(serializers.Serializer):
-    """Full POS checkout — creates a Sale with items, reduces stock, awards loyalty points."""
+    """Full POS checkout — creates a Sale with items, reduces stock, awards loyalty points.
+
+    When `order_id` is provided, `items` is treated as per-product selling-price
+    overrides (quantity is taken from the order). For direct checkouts, `items`
+    must include quantity.
+    """
     items = CheckoutItemSerializer(many=True, required=False)
     order_id = serializers.UUIDField(required=False, allow_null=True)
     phone_number = serializers.CharField(max_length=20, required=False, allow_blank=True)
@@ -62,6 +67,12 @@ class CheckoutSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 "Provide either `order_id` or `items`."
             )
+        if not attrs.get("order_id"):
+            for item in attrs.get("items") or []:
+                if "quantity" not in item:
+                    raise serializers.ValidationError(
+                        "`quantity` is required for direct checkout items."
+                    )
         return attrs
 
 

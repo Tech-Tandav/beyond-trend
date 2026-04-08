@@ -48,14 +48,21 @@ class CheckoutUseCase(BaseUseCase):
             if not self._order.items.exists():
                 raise ValidationError({"detail": "Order has no items to checkout."})
 
+            # FE may override per-product selling prices on checkout.
+            price_overrides = {
+                str(i["product_id"]): i["selling_price"]
+                for i in (self._data.get("items") or [])
+            }
+
             # Stock was already decremented when the order was created — don't re-check.
             for order_item in self._order.items.all():
+                pid = str(order_item.product_id)
                 self._items.append({
                     "product": order_item.product,
                     "quantity": order_item.quantity,
-                    "selling_price": order_item.price,
+                    "selling_price": price_overrides.get(pid, order_item.price),
                 })
-                self._products[str(order_item.product_id)] = order_item.product
+                self._products[pid] = order_item.product
 
             if self._customer is None and self._order.loyalty_customer_id:
                 self._customer = self._order.loyalty_customer
