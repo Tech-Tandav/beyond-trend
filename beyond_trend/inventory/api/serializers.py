@@ -26,7 +26,7 @@ class StockSerializer(BaseModelSerializer):
 
     class Meta(BaseModelSerializer.Meta):
         model = Stock
-        fields = ["id", "variant", "quantity", "is_low_stock", "is_out_of_stock", "updated_at"]
+        fields = ["id", "product", "quantity", "is_low_stock", "is_out_of_stock", "updated_at"]
         read_only_fields = ["id", "is_low_stock", "is_out_of_stock", "updated_at"]
 
 
@@ -57,7 +57,7 @@ class InventoryLogSerializer(BaseModelSerializer):
         model = InventoryLog
         fields = [
             "id",
-            "variant",
+            "product",
             "action",
             "quantity",
             "staff",
