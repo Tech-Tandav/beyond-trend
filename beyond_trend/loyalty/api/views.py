@@ -1,3 +1,6 @@
+from django.db import models
+from django.db.models import Count, Sum, Value
+from django.db.models.functions import Coalesce
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
     OpenApiExample,
@@ -58,11 +61,14 @@ RedeemResponseSerializer = inline_serializer(
 )
 class CustomerViewSet(BaseModelViewSet):
     serializer_class = CustomerSerializer
-    queryset = Customer.objects.all()
+    queryset = Customer.objects.annotate(
+        transaction_count=Count("sales", distinct=True),
+        transaction_amount=Coalesce(Sum("sales__total_amount"), Value(0), output_field=models.DecimalField(max_digits=12, decimal_places=2)),
+    )
     permission_classes = [IsAuthenticated]
     filterset_class = CustomerFilter
     search_fields = ["name", "email", "phone"]
-    ordering_fields = ["name", "total_points", "created_at"]
+    ordering_fields = ["name", "total_points", "created_at", "transaction_count", "transaction_amount"]
 
     @extend_schema(
         tags=["Loyalty - Customers"],
