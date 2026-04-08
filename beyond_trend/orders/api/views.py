@@ -55,9 +55,9 @@ from beyond_trend.orders.api.usecases import (
 )
 class OrderListAPIView(generics.ListAPIView):
     serializer_class = OrderSerializer
-    queryset = Order.objects.filter(status=Order.PENDING).prefetch_related(
+    queryset = Order.objects.prefetch_related(
         "items__product__brand"
-    )
+    ).all()
     permission_classes = [IsAuthenticated]
     filterset_class = OrderFilter
     search_fields = ["customer_name", "email", "phone"]
