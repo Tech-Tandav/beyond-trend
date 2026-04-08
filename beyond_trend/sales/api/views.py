@@ -72,7 +72,7 @@ class SaleViewSet(BaseModelViewSet):
                 value={
                     "items": [
                         {
-                            "variant_id": "0d3b3ce6-1b9f-4f1d-8f5d-6f1a2c2d3e4f",
+                            "product_id": "0d3b3ce6-1b9f-4f1d-8f5d-6f1a2c2d3e4f",
                             "quantity": 1,
                             "selling_price": "4500.00",
                         }
