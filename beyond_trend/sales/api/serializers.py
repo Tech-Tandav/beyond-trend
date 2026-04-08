@@ -52,10 +52,9 @@ class CheckoutSerializer(serializers.Serializer):
     """Full POS checkout — creates a Sale with items, reduces stock, awards loyalty points."""
     items = CheckoutItemSerializer(many=True, required=False)
     order_id = serializers.UUIDField(required=False, allow_null=True)
-    customer_id = serializers.UUIDField(required=False, allow_null=True)
+    phone_number = serializers.CharField(max_length=20, required=False, allow_blank=True)
     loyalty_points_used = serializers.IntegerField(min_value=0, default=0)
     notes = serializers.CharField(required=False, allow_blank=True, default="")
-    phone_number = serializers.CharField(max_length=20, required=False, allow_blank=True)
 
     def validate(self, attrs):
         if not attrs.get("order_id") and not attrs.get("items"):

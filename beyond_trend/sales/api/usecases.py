@@ -28,12 +28,11 @@ class CheckoutUseCase(BaseUseCase):
         self._loyalty_points_used = data.get("loyalty_points_used", 0)
 
     def is_valid(self):
-        customer_id = self._data.get("customer_id")
-        if customer_id:
-            try:
-                self._customer = Customer.objects.get(id=customer_id)
-            except Customer.DoesNotExist:
-                raise NotFound("Customer not found.")
+        phone_number = (self._data.get("phone_number") or "").strip()
+        if phone_number:
+            self._customer = Customer.objects.filter(phone=phone_number).first()
+            if not self._customer:
+                raise NotFound(f"Customer with phone {phone_number} not found.")
 
         order_id = self._data.get("order_id")
         if order_id:
