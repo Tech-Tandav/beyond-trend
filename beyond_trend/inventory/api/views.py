@@ -327,6 +327,18 @@ class PublicInventoryView(APIView):
         paginator = self.pagination_class()
         page = paginator.paginate_queryset(rows, request, view=self)
 
+        from django.conf import settings as dj_settings
+
+        def build_image_url(image_path):
+            if not image_path:
+                return None
+            if image_path.startswith(("http://", "https://")):
+                return request.build_absolute_uri(image_path)
+            media_url = dj_settings.MEDIA_URL or "/media/"
+            if not media_url.endswith("/"):
+                media_url += "/"
+            return request.build_absolute_uri(f"{media_url}{image_path.lstrip('/')}")
+
         result = [
             {
                 "slug": row["slug"],
@@ -336,7 +348,7 @@ class PublicInventoryView(APIView):
                 "size": row["sizes"],
                 "barcode": row["barcodes"],
                 "quantity": row["total_quantity"],
-                "image": row.get("primary_image"),
+                "image": build_image_url(row.get("primary_image")),
             }
             for row in page
         ]
