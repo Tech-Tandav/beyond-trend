@@ -10,7 +10,8 @@
       "Bash(python manage.py spectacular --file /tmp/schema.yml)",
       "Bash(.venv/bin/python -c \"from beyond_trend.inventory.api import views; from beyond_trend.loyalty.api import views as v2; from beyond_trend.sales.api import views as v3; from beyond_trend.orders.api import views as v4; print\\('OK'\\)\")",
       "Bash(DJANGO_SETTINGS_MODULE=config.settings.local .venv/bin/python -c \"import django; django.setup\\(\\); from beyond_trend.inventory.api import views; from beyond_trend.loyalty.api import views as v2; from beyond_trend.sales.api import views as v3; from beyond_trend.orders.api import views as v4; print\\('OK'\\)\")",
-      "Bash(DJANGO_SETTINGS_MODULE=config.settings.local .venv/bin/python manage.py spectacular --file /tmp/schema.yml)"
+      "Bash(DJANGO_SETTINGS_MODULE=config.settings.local .venv/bin/python manage.py spectacular --file /tmp/schema.yml)",
+      "Bash(python -c \"import django; print\\(django.VERSION\\)\")"
     ]
   }
 }

@@ -58,6 +58,8 @@ class CheckoutUseCase(BaseUseCase):
 
             if self._customer is None and self._order.loyalty_customer_id:
                 self._customer = self._order.loyalty_customer
+            if self._customer is None and self._order.phone:
+                self._customer = Customer.objects.filter(phone=self._order.phone).first()
         else:
             for item in self._data["items"]:
                 vid = item["product_id"]
