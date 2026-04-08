@@ -40,6 +40,9 @@ class OrderSerializer(BaseModelSerializer):
 class CreateOrderItemSerializer(serializers.Serializer):
     product_id = serializers.UUIDField()
     quantity = serializers.IntegerField(min_value=1)
+    selling_price = serializers.DecimalField(
+        max_digits=10, decimal_places=2, required=False, allow_null=True
+    )
 
 
 class CreateOrderSerializer(serializers.Serializer):
