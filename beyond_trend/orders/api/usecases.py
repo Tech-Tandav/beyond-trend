@@ -78,10 +78,20 @@ class CreateOrderUseCase(BaseUseCase):
             stock.quantity -= quantity
             stock.save(update_fields=["quantity"])
 
+        phone = self._data.get("phone", "")
+        if self._loyalty_customer is None and phone:
+            self._loyalty_customer, _ = Customer.objects.get_or_create(
+                phone=phone,
+                defaults={
+                    "name": self._data["customer_name"],
+                    "email": self._data["email"],
+                },
+            )
+
         order = Order.objects.create(
             customer_name=self._data["customer_name"],
             email=self._data["email"],
-            phone=self._data.get("phone", ""),
+            phone=phone,
             notes=self._data.get("notes", ""),
             total_amount=self._total_amount,
             loyalty_customer=self._loyalty_customer,
