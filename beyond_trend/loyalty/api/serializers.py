@@ -6,10 +6,27 @@ from beyond_trend.loyalty.models import Customer, LoyaltySettings, LoyaltyTransa
 
 
 class CustomerSerializer(BaseModelSerializer):
+    points_value_npr = serializers.SerializerMethodField()
+
     class Meta(BaseModelSerializer.Meta):
         model = Customer
-        fields = ["id", "name", "email", "phone", "total_points", "is_archived", "created_at"]
-        read_only_fields = ["id", "total_points", "created_at"]
+        fields = [
+            "id",
+            "name",
+            "email",
+            "phone",
+            "total_points",
+            "points_value_npr",
+            "is_archived",
+            "created_at",
+        ]
+        read_only_fields = ["id", "total_points", "points_value_npr", "created_at"]
+
+    def get_points_value_npr(self, obj):
+        if not hasattr(self, "_point_value_npr"):
+            settings = LoyaltySettings.objects.first()
+            self._point_value_npr = settings.point_value_npr if settings else 0
+        return str(obj.total_points * self._point_value_npr)
 
 
 class LoyaltyTransactionSerializer(BaseModelSerializer):
