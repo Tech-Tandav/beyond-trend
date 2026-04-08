@@ -3,7 +3,7 @@ from rest_framework.exceptions import NotFound, ValidationError
 
 from beyond_trend.core.usecases import BaseUseCase
 from beyond_trend.loyalty.models import Customer
-from beyond_trend.inventory.models import InventoryLog, Product, Stock
+from beyond_trend.inventory.models import InventoryLog, Product
 
 from beyond_trend.orders.models import Order, OrderItem, PreOrder
 
@@ -62,23 +62,18 @@ class CreateOrderUseCase(BaseUseCase):
     def _factory(self):
         # Lock + verify stock atomically so two concurrent orders can't oversell.
         for product, quantity, _ in self._items_to_create:
-            try:
-                stock = Stock.objects.select_for_update().get(product=product)
-            except Stock.DoesNotExist:
-                raise ValidationError(
-                    {"detail": f"No stock record for {product}."}
-                )
-            if stock.quantity < quantity:
+            locked = Product.objects.select_for_update().get(pk=product.pk)
+            if locked.quantity < quantity:
                 raise ValidationError(
                     {
                         "detail": (
-                            f"Insufficient stock for {product}. "
-                            f"Requested {quantity}, available {stock.quantity}."
+                            f"Insufficient stock for {locked}. "
+                            f"Requested {quantity}, available {locked.quantity}."
                         )
                     }
                 )
-            stock.quantity -= quantity
-            stock.save(update_fields=["quantity"])
+            locked.quantity -= quantity
+            locked.save(update_fields=["quantity"])
 
         phone = self._data.get("phone", "")
         if self._loyalty_customer is None and phone:
@@ -152,14 +147,12 @@ class UpdateOrderStatusUseCase(BaseUseCase):
         if self._new_status == Order.CANCELLED and previous_status != Order.CANCELLED:
             items = self._order.items.select_related("product").all()
             for item in items:
-                stock, _ = Stock.objects.select_for_update().get_or_create(
-                    product=item.product
-                )
-                stock.quantity += item.quantity
-                stock.save(update_fields=["quantity"])
+                product = Product.objects.select_for_update().get(pk=item.product_id)
+                product.quantity += item.quantity
+                product.save(update_fields=["quantity"])
 
                 InventoryLog.objects.create(
-                    prodcut=item.product,
+                    product=product,
                     action=InventoryLog.CHECK_IN,
                     quantity=item.quantity,
                     staff=self._staff,

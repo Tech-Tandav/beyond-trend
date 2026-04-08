@@ -3,7 +3,7 @@ from django.contrib import admin
 from beyond_trend.core.admin import BaseModelAdmin, BasePublishModelAdmin
 from beyond_trend.core.excel import ExcelExportMixin
 
-from beyond_trend.inventory.models import Vendor, Brand, InventoryLog, Product, Stock
+from beyond_trend.inventory.models import Vendor, Brand, InventoryLog, Product
 
 
 @admin.register(Vendor)
@@ -21,7 +21,7 @@ class BrandAdmin(BaseModelAdmin):
 
 @admin.register(Product)
 class ProductAdmin(ExcelExportMixin, BasePublishModelAdmin):
-    list_display = ["brand", "model", "color", "size", "is_published", "is_archived", "created_at"]
+    list_display = ["brand", "model", "color", "size", "quantity", "is_published", "is_archived", "created_at"]
     list_filter = ["brand", "is_published", "is_archived"]
     search_fields = ["model", "brand__name", "id"]
     actions = ["archive", "restore", "publish", "hide", "export_to_excel"]
@@ -35,7 +35,7 @@ class ProductAdmin(ExcelExportMixin, BasePublishModelAdmin):
         ("Barcode", "barcode"),
         ("Vendor", "vendor__name"),
         ("Selling Price", "selling_price"),
-        ("Stock Quantity", "stock__quantity"),
+        ("Quantity", "quantity"),
         ("Low Stock Threshold", "low_stock_threshold"),
         ("Published", "is_published"),
         ("Archived", "is_archived"),
@@ -46,22 +46,8 @@ class ProductAdmin(ExcelExportMixin, BasePublishModelAdmin):
 
     def get_excel_sheets(self, request, queryset):
         return super().get_excel_sheets(
-            request, queryset.select_related("brand", "vendor", "stock")
+            request, queryset.select_related("brand", "vendor")
         )
-
-
-@admin.register(Stock)
-class StockAdmin(BaseModelAdmin):
-    list_display = ["product", "quantity", "low_stock_status", "out_of_stock_status"]
-    search_fields = ["product__name", "product__barcode", "id"]
-
-    @admin.display(boolean=True, description="Low Stock")
-    def low_stock_status(self, obj):
-        return obj.is_low_stock
-
-    @admin.display(boolean=True, description="Out of Stock")
-    def out_of_stock_status(self, obj):
-        return obj.is_out_of_stock
 
 
 @admin.register(InventoryLog)

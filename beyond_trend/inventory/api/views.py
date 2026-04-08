@@ -1,4 +1,4 @@
-from django.db.models import F, Sum, Value
+from django.db.models import Sum, Value
 from django.db.models.functions import Coalesce
 
 from drf_spectacular.types import OpenApiTypes
@@ -11,7 +11,6 @@ from drf_spectacular.utils import (
     inline_serializer,
 )
 from rest_framework import generics, serializers, status
-from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -19,8 +18,8 @@ from rest_framework.views import APIView
 from beyond_trend.core.pagination import CustomPagination
 from beyond_trend.core.viewsets import BaseModelViewSet
 
-from beyond_trend.inventory.models import Vendor, Brand, InventoryLog, Product, Stock
-from beyond_trend.inventory.api.filters import InventoryLogFilter, ProductFilter, StockFilter
+from beyond_trend.inventory.models import Vendor, Brand, InventoryLog, Product
+from beyond_trend.inventory.api.filters import InventoryLogFilter, ProductFilter
 from beyond_trend.inventory.api.serializers import (
     VendorSerializer,
     BrandSerializer,
@@ -28,7 +27,6 @@ from beyond_trend.inventory.api.serializers import (
     CheckOutSerializer,
     InventoryLogSerializer,
     ProductSerializer,
-    StockSerializer,
 )
 from beyond_trend.inventory.api.usecases import CheckInUseCase, CheckOutUseCase
 
@@ -37,7 +35,7 @@ StockMovementResponseSerializer = inline_serializer(
     name="StockMovementResponse",
     fields={
         "detail": serializers.CharField(),
-        "variant": serializers.CharField(),
+        "product": serializers.CharField(),
         "new_quantity": serializers.IntegerField(),
     },
 )
@@ -177,12 +175,12 @@ class ProductDestroyView(generics.DestroyAPIView):
     examples=[
         OpenApiExample(
             "Check in 10 units",
-            value={"variant_id": "0d3b3ce6-1b9f-4f1d-8f5d-6f1a2c2d3e4f", "quantity": 10, "notes": "Vendor delivery"},
+            value={"product_id": "0d3b3ce6-1b9f-4f1d-8f5d-6f1a2c2d3e4f", "quantity": 10, "notes": "Vendor delivery"},
             request_only=True,
         ),
         OpenApiExample(
             "Success response",
-            value={"detail": "Stock checked in successfully.", "variant": "Nike AirMax 42 Black", "new_quantity": 25},
+            value={"detail": "Stock checked in successfully.", "product": "Nike AirMax 42 Black", "new_quantity": 25},
             response_only=True,
         ),
     ],
@@ -191,7 +189,7 @@ class ProductCheckInView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        """Add stock for a variant (Check-In)."""
+        """Add stock for a product (Check-In)."""
         serializer = CheckInSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
@@ -216,21 +214,21 @@ class ProductCheckInView(APIView):
     request=CheckOutSerializer,
     responses={
         200: StockMovementResponseSerializer,
-        400: OpenApiResponse(description="Insufficient stock or no stock record."),
-        404: OpenApiResponse(description="Variant not found."),
+        400: OpenApiResponse(description="Insufficient stock."),
+        404: OpenApiResponse(description="Product not found."),
     },
 )
 class ProductCheckOutView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        """Remove stock for a variant (manual inventory check-out)."""
+        """Remove stock for a product (manual inventory check-out)."""
         serializer = CheckOutSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
         use_case = CheckOutUseCase(
-            variant_id=data["variant_id"],
+            product_id=data["product_id"],
             quantity=data["quantity"],
             notes=data.get("notes", ""),
             staff=request.user,
@@ -240,67 +238,11 @@ class ProductCheckOutView(APIView):
 
 @extend_schema_view(
     list=extend_schema(
-        tags=["Inventory - Stock"],
-        summary="List stock levels",
-        description="Returns the current stock quantity for every product variant.",
-        parameters=[
-            OpenApiParameter("product", OpenApiTypes.UUID, OpenApiParameter.QUERY, description="Filter by product variant UUID."),
-            OpenApiParameter("brand", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by brand slug."),
-            OpenApiParameter("ordering", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Order by: quantity, variant__product__name (prefix `-` for descending)."),
-        ],
-    ),
-    retrieve=extend_schema(tags=["Inventory - Stock"], summary="Get stock for a variant"),
-    partial_update=extend_schema(
-        tags=["Inventory - Stock"],
-        summary="Patch a stock row",
-        description="Direct stock adjustment. Prefer the check-in / check-out endpoints when possible — they leave an audit trail.",
-    ),
-)
-class StockViewSet(BaseModelViewSet):
-    serializer_class = StockSerializer
-    queryset = Stock.objects.select_related("variant__product").all()
-    permission_classes = [IsAuthenticated]
-    http_method_names = ["get", "patch", "head", "options"]
-    filterset_class = StockFilter
-    ordering_fields = ["quantity", "variant__product__name"]
-
-    @extend_schema(
-        tags=["Inventory - Stock"],
-        summary="List low-stock variants",
-        description="Returns variants whose `quantity` is greater than 0 but at or below their per-product `low_stock_threshold`.",
-        responses={200: StockSerializer(many=True)},
-    )
-    @action(detail=False, methods=["get"], url_path="low-stock")
-    def low_stock(self, request):
-        """Return all variants with low stock."""
-        qs = self.get_queryset().filter(
-            quantity__gt=0,
-            quantity__lte=F("variant__product__low_stock_threshold"),
-        )
-        serializer = self.get_serializer(qs, many=True)
-        return Response(serializer.data)
-
-    @extend_schema(
-        tags=["Inventory - Stock"],
-        summary="List out-of-stock variants",
-        description="Returns variants whose `quantity` is exactly 0.",
-        responses={200: StockSerializer(many=True)},
-    )
-    @action(detail=False, methods=["get"], url_path="out-of-stock")
-    def out_of_stock(self, request):
-        """Return all out-of-stock variants."""
-        qs = self.get_queryset().filter(quantity=0)
-        serializer = self.get_serializer(qs, many=True)
-        return Response(serializer.data)
-
-
-@extend_schema_view(
-    list=extend_schema(
         tags=["Inventory - Logs"],
         summary="List inventory log entries",
         description="Read-only audit trail of every stock movement (check-ins, check-outs, sales).",
         parameters=[
-            OpenApiParameter("variant", OpenApiTypes.UUID, OpenApiParameter.QUERY, description="Filter by variant UUID."),
+            OpenApiParameter("product", OpenApiTypes.UUID, OpenApiParameter.QUERY, description="Filter by product UUID."),
             OpenApiParameter(
                 "action",
                 OpenApiTypes.STR,
@@ -319,7 +261,7 @@ class StockViewSet(BaseModelViewSet):
 )
 class InventoryLogViewSet(BaseModelViewSet):
     serializer_class = InventoryLogSerializer
-    queryset = InventoryLog.objects.select_related("variant__product", "staff").all()
+    queryset = InventoryLog.objects.select_related("product__brand", "staff").all()
     permission_classes = [IsAuthenticated]
     http_method_names = ["get", "head", "options"]
     filterset_class = InventoryLogFilter
@@ -368,7 +310,7 @@ class PublicInventoryView(APIView):
                 colors=ArrayAgg("color", distinct=True, ordering="color"),
                 sizes=ArrayAgg("size", distinct=True, ordering="size"),
                 barcodes=ArrayAgg("barcode", distinct=True, ordering="barcode"),
-                quantity=Coalesce(Sum("stock__quantity"), 0),
+                total_quantity=Coalesce(Sum("quantity"), 0),
             )
             .order_by("brand_name", "model")
         )
@@ -378,14 +320,14 @@ class PublicInventoryView(APIView):
 
         result = [
             {
-                "slug": row['slug'],
+                "slug": row["slug"],
                 "brand_name": row["brand_name"],
                 "model": row["model"],
                 "color": row["colors"],
                 "size": row["sizes"],
                 "barcode": row["barcodes"],
-                "quantity": row["quantity"],
-                "image": row["img"] if "img" in row else None,
+                "quantity": row["total_quantity"],
+                "image": row.get("image"),
             }
             for row in page
         ]

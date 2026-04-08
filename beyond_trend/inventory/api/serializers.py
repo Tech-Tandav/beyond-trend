@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from beyond_trend.core.serializers import BaseModelSerializer
 
-from beyond_trend.inventory.models import Brand,  InventoryLog, Product, Stock, Vendor
+from beyond_trend.inventory.models import Brand, InventoryLog, Product, Vendor
 
 
 class VendorSerializer(BaseModelSerializer):
@@ -20,20 +20,12 @@ class BrandSerializer(BaseModelSerializer):
         read_only_fields = ["id", "slug", "created_at"]
 
 
-class StockSerializer(BaseModelSerializer):
-    is_low_stock = serializers.BooleanField(read_only=True)
-    is_out_of_stock = serializers.BooleanField(read_only=True)
-
-    class Meta(BaseModelSerializer.Meta):
-        model = Stock
-        fields = ["id", "product", "quantity", "is_low_stock", "is_out_of_stock", "updated_at"]
-        read_only_fields = ["id", "is_low_stock", "is_out_of_stock", "updated_at"]
-
-
 class ProductSerializer(BaseModelSerializer):
     selling_price = serializers.DecimalField(
         max_digits=10, decimal_places=2, required=False, allow_null=True
     )
+    is_low_stock = serializers.BooleanField(read_only=True)
+    is_out_of_stock = serializers.BooleanField(read_only=True)
 
     class Meta(BaseModelSerializer.Meta):
         model = Product
@@ -51,9 +43,12 @@ class ProductSerializer(BaseModelSerializer):
             "color",
             "barcode",
             "selling_price",
+            "quantity",
             "low_stock_threshold",
+            "is_low_stock",
+            "is_out_of_stock",
         ]
-        read_only_fields = ["id", "slug", "created_at"]
+        read_only_fields = ["id", "slug", "created_at", "is_low_stock", "is_out_of_stock"]
 
 
 class InventoryLogSerializer(BaseModelSerializer):
@@ -72,14 +67,14 @@ class InventoryLogSerializer(BaseModelSerializer):
 
 
 class CheckInSerializer(serializers.Serializer):
-    """Used for stock check-in (adding stock to an existing variant)."""
-    variant_id = serializers.UUIDField()
+    """Used for stock check-in (adding stock to an existing product)."""
+    product_id = serializers.UUIDField()
     quantity = serializers.IntegerField(min_value=1)
     notes = serializers.CharField(required=False, allow_blank=True, default="")
 
 
 class CheckOutSerializer(serializers.Serializer):
-    """Used for single-variant stock check-out (manual inventory removal)."""
-    variant_id = serializers.UUIDField()
+    """Used for single-product stock check-out (manual inventory removal)."""
+    product_id = serializers.UUIDField()
     quantity = serializers.IntegerField(min_value=1)
     notes = serializers.CharField(required=False, allow_blank=True, default="")

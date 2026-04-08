@@ -3,22 +3,22 @@ from rest_framework.exceptions import NotFound, ValidationError
 
 from beyond_trend.core.usecases import BaseUseCase
 
-from beyond_trend.inventory.models import InventoryLog, Product, Stock
+from beyond_trend.inventory.models import InventoryLog, Product
 
 
 class CheckInUseCase(BaseUseCase):
-    def __init__(self, variant_id, quantity, notes, staff):
-        self._variant_id = variant_id
+    def __init__(self, product_id, quantity, notes, staff):
+        self._product_id = product_id
         self._quantity = quantity
         self._notes = notes
         self._staff = staff
-        self._variant = None
+        self._product = None
 
     def is_valid(self):
         try:
-            self._variant = Product.objects.get(id=self._variant_id)
+            self._product = Product.objects.select_for_update().get(id=self._product_id)
         except Product.DoesNotExist:
-            raise NotFound("Variant not found.")
+            raise NotFound("Product not found.")
 
     @transaction.atomic
     def execute(self):
@@ -26,12 +26,11 @@ class CheckInUseCase(BaseUseCase):
         return self._factory()
 
     def _factory(self):
-        stock, _ = Stock.objects.get_or_create(variant=self._variant)
-        stock.quantity += self._quantity
-        stock.save(update_fields=["quantity"])
+        self._product.quantity += self._quantity
+        self._product.save(update_fields=["quantity"])
 
         InventoryLog.objects.create(
-            variant=self._variant,
+            product=self._product,
             action=InventoryLog.CHECK_IN,
             quantity=self._quantity,
             staff=self._staff,
@@ -40,34 +39,28 @@ class CheckInUseCase(BaseUseCase):
 
         return {
             "detail": "Stock checked in successfully.",
-            "variant": str(self._variant),
-            "new_quantity": stock.quantity,
+            "product": str(self._product),
+            "new_quantity": self._product.quantity,
         }
 
 
 class CheckOutUseCase(BaseUseCase):
-    def __init__(self, variant_id, quantity, notes, staff):
-        self._variant_id = variant_id
+    def __init__(self, product_id, quantity, notes, staff):
+        self._product_id = product_id
         self._quantity = quantity
         self._notes = notes
         self._staff = staff
-        self._variant = None
-        self._stock = None
+        self._product = None
 
     def is_valid(self):
         try:
-            self._variant = Product.objects.get(id=self._variant_id)
+            self._product = Product.objects.select_for_update().get(id=self._product_id)
         except Product.DoesNotExist:
-            raise NotFound("Variant not found.")
+            raise NotFound("Product not found.")
 
-        try:
-            self._stock = Stock.objects.get(variant=self._variant)
-        except Stock.DoesNotExist:
-            raise ValidationError({"detail": "No stock record for this variant."})
-
-        if self._stock.quantity < self._quantity:
+        if self._product.quantity < self._quantity:
             raise ValidationError(
-                {"detail": f"Insufficient stock. Available: {self._stock.quantity}"}
+                {"detail": f"Insufficient stock. Available: {self._product.quantity}"}
             )
 
     @transaction.atomic
@@ -76,11 +69,11 @@ class CheckOutUseCase(BaseUseCase):
         return self._factory()
 
     def _factory(self):
-        self._stock.quantity -= self._quantity
-        self._stock.save(update_fields=["quantity"])
+        self._product.quantity -= self._quantity
+        self._product.save(update_fields=["quantity"])
 
         InventoryLog.objects.create(
-            variant=self._variant,
+            product=self._product,
             action=InventoryLog.CHECK_OUT,
             quantity=-self._quantity,
             staff=self._staff,
@@ -89,6 +82,6 @@ class CheckOutUseCase(BaseUseCase):
 
         return {
             "detail": "Stock checked out successfully.",
-            "variant": str(self._variant),
-            "new_quantity": self._stock.quantity,
+            "product": str(self._product),
+            "new_quantity": self._product.quantity,
         }

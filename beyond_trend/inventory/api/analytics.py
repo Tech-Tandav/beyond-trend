@@ -36,20 +36,20 @@ class InventoryAnalyticsView(APIView):
     GET /api/v1/inventory/analytics/
 
     Returns a snapshot of the current inventory state.
-    Stock levels come from the related Stock model and low-stock thresholds
+    Stock levels come from the Product.quantity field and low-stock thresholds
     are evaluated per-product.
     """
 
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        qty = Coalesce(F("stock__quantity"), Value(0), output_field=IntegerField())
+        qty = Coalesce(F("quantity"), Value(0), output_field=IntegerField())
         stock_value_expr = ExpressionWrapper(
             F("selling_price") * qty,
             output_field=DecimalField(max_digits=14, decimal_places=2),
         )
 
-        base_qs = Product.objects.select_related("brand", "stock").annotate(
+        base_qs = Product.objects.select_related("brand").annotate(
             qty=qty,
             stock_value=stock_value_expr,
         )

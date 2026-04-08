@@ -3,7 +3,7 @@ import os
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
-from beyond_trend.inventory.models import Brand, Product, Stock, Vendor
+from beyond_trend.inventory.models import Brand, Product, Vendor
 
 
 def _is_truthy(value: str | None) -> bool:
@@ -77,7 +77,7 @@ class Command(BaseCommand):
         ]
 
         for idx, (brand_name, model, color, size, qty, price) in enumerate(catalog):
-            product = Product.objects.create(
+            Product.objects.create(
                 brand=brands[brand_name],
                 vendor=vendors[idx % len(vendors)],
                 model=model,
@@ -85,7 +85,7 @@ class Command(BaseCommand):
                 size=size,
                 color=color,
                 selling_price=price,
+                quantity=qty,
                 low_stock_threshold=5,
                 is_published=True,
             )
-            Stock.objects.create(product=product, quantity=qty)

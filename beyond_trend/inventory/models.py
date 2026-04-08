@@ -50,6 +50,7 @@ class Product(BaseModelWithSlug):
     color = models.CharField(_("Color"), max_length=50)
     barcode = models.CharField(_("Barcode"), max_length=100, unique=True, blank=True)
     selling_price = models.DecimalField(_("Selling Price"), max_digits=10, decimal_places=2, null=True, blank=True)
+    quantity = models.PositiveIntegerField(_("Quantity"), default=0)
     low_stock_threshold = models.PositiveIntegerField(_("Low Stock Threshold"), default=5)
 
     # class Meta:
@@ -64,25 +65,9 @@ class Product(BaseModelWithSlug):
             self.barcode = uuid.uuid4().hex[:12].upper()
         super().save(*args, **kwargs)
 
-
-class Stock(BaseModel):
-    product = models.OneToOneField(
-        Product,
-        on_delete=models.CASCADE,
-        related_name="stock",
-    )
-    quantity = models.PositiveIntegerField(_("Quantity"), default=0)
-
-    class Meta:
-        verbose_name = "Stock"
-        verbose_name_plural = "Stock"
-
-    def __str__(self):
-        return f"{self.product} — {self.quantity} units"
-
     @property
     def is_low_stock(self):
-        return 0 < self.quantity <= self.product.low_stock_threshold
+        return 0 < self.quantity <= self.low_stock_threshold
 
     @property
     def is_out_of_stock(self):

@@ -4,7 +4,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework.exceptions import NotFound, ValidationError
 
 from beyond_trend.core.usecases import BaseUseCase
-from beyond_trend.inventory.models import InventoryLog, Product, Stock
+from beyond_trend.inventory.models import InventoryLog, Product
 from beyond_trend.loyalty.models import Customer, LoyaltySettings, LoyaltyTransaction
 from beyond_trend.orders.models import Order
 
@@ -20,7 +20,6 @@ class CheckoutUseCase(BaseUseCase):
         self._order = None
         self._items = []  # normalized list of {"product": Product, "quantity": int, "selling_price": Decimal}
         self._products = {}
-        self._stocks = {}
         self._loyalty_settings = None
         self._subtotal = 0
         self._discount_amount = 0
@@ -75,19 +74,14 @@ class CheckoutUseCase(BaseUseCase):
                     product = Product.objects.get(id=vid)
                 except Product.DoesNotExist:
                     raise NotFound(f"product {vid} not found.")
-                try:
-                    stock = Stock.objects.get(product=product)
-                except Stock.DoesNotExist:
-                    raise ValidationError({"detail": f"No stock for product: {product}"})
-                if stock.quantity < item["quantity"]:
+                if product.quantity < item["quantity"]:
                     raise ValidationError(
                         {
                             "detail": f"Insufficient stock for {product}. "
-                            f"Available: {stock.quantity}, Requested: {item['quantity']}"
+                            f"Available: {product.quantity}, Requested: {item['quantity']}"
                         }
                     )
                 self._products[str(vid)] = product
-                self._stocks[str(vid)] = stock
                 self._items.append({
                     "product": product,
                     "quantity": item["quantity"],
@@ -147,12 +141,12 @@ class CheckoutUseCase(BaseUseCase):
             # Stock + inventory log were already handled at order creation time;
             # only decrement here for direct (non-order) checkouts.
             if self._order is None:
-                stock = self._stocks[str(product.id)]
-                stock.quantity -= item["quantity"]
-                stock.save(update_fields=["quantity"])
+                locked = Product.objects.select_for_update().get(pk=product.pk)
+                locked.quantity -= item["quantity"]
+                locked.save(update_fields=["quantity"])
 
                 InventoryLog.objects.create(
-                    product=product,
+                    product=locked,
                     action=InventoryLog.CHECK_OUT,
                     quantity=-item["quantity"],
                     staff=self._staff,
