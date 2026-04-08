@@ -1,5 +1,7 @@
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
     OpenApiExample,
+    OpenApiParameter,
     OpenApiResponse,
     extend_schema,
     extend_schema_view,
@@ -36,6 +38,20 @@ from beyond_trend.orders.api.usecases import (
         "Supports filtering via `OrderFilter`, `?search=` on customer name / email / phone, "
         "and `?ordering=` on `created_at`, `total_amount`, `status`."
     ),
+    parameters=[
+        OpenApiParameter(
+            "status",
+            OpenApiTypes.STR,
+            OpenApiParameter.QUERY,
+            description="Filter by order status.",
+            enum=[choice[0] for choice in Order.STATUS_CHOICES],
+        ),
+        OpenApiParameter("loyalty_customer", OpenApiTypes.UUID, OpenApiParameter.QUERY, description="Filter by loyalty customer UUID."),
+        OpenApiParameter("date_from", OpenApiTypes.DATE, OpenApiParameter.QUERY, description="Filter orders on or after this date (YYYY-MM-DD)."),
+        OpenApiParameter("date_to", OpenApiTypes.DATE, OpenApiParameter.QUERY, description="Filter orders on or before this date (YYYY-MM-DD)."),
+        OpenApiParameter("search", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Search across customer_name, email, phone."),
+        OpenApiParameter("ordering", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Order by: created_at, total_amount, status (prefix `-` for descending)."),
+    ],
 )
 class OrderListAPIView(generics.ListAPIView):
     serializer_class = OrderSerializer
@@ -140,6 +156,17 @@ class OrderStatusUpdateAPIView(APIView):
         tags=["Pre-Orders"],
         summary="List pre-orders",
         description="Pre-orders are customer requests for items not currently in stock.",
+        parameters=[
+            OpenApiParameter(
+                "status",
+                OpenApiTypes.STR,
+                OpenApiParameter.QUERY,
+                description="Filter by pre-order status.",
+                enum=[choice[0] for choice in PreOrder.STATUS_CHOICES],
+            ),
+            OpenApiParameter("search", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Search across customer_name, email, phone, product_name, brand."),
+            OpenApiParameter("ordering", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Order by: created_at, status (prefix `-` for descending)."),
+        ],
     ),
     retrieve=extend_schema(tags=["Pre-Orders"], summary="Get a pre-order"),
     create=extend_schema(tags=["Pre-Orders"], summary="Create a pre-order"),
