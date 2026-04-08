@@ -44,13 +44,7 @@ class CreateOrderUseCase(BaseUseCase):
             except Product.DoesNotExist:
                 raise NotFound(f"Product {product_id} not found.")
 
-            price = item.get("selling_price") or product.selling_price
-            if price is None:
-                raise ValidationError(
-                    {"detail": f"Product {product} has no selling price set. "
-                               f"Provide `selling_price` for this item."}
-                )
-
+            price = item.get("selling_price") or product.selling_price or 0
             self._total_amount += price * quantity
             self._items_to_create.append((product, quantity, price))
 
