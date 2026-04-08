@@ -26,7 +26,7 @@ class CheckoutUseCase(BaseUseCase):
         self._discount_amount = 0
         self._total_amount = 0
         self._redeem = data.get("redeem", False)
-        self._loyalty_points_used = data.get("loyalty_points_used", 0) if self._redeem else 0
+        self._loyalty_points_used = 0
 
     def is_valid(self):
         phone_number = (self._data.get("phone_number") or "").strip()
@@ -99,16 +99,15 @@ class CheckoutUseCase(BaseUseCase):
                     {"detail": f"Customer needs at least {Customer.REDEEM_THRESHOLD} points to redeem. "
                                f"Available: {self._customer.total_points}"}
                 )
-            if self._loyalty_points_used <= 0:
-                raise ValidationError({"detail": "loyalty_points_used must be > 0 when redeem is true."})
-            if self._customer.total_points < self._loyalty_points_used:
-                raise ValidationError(
-                    {"detail": f"Insufficient loyalty points. Available: {self._customer.total_points}"}
-                )
             self._loyalty_settings = LoyaltySettings.objects.first()
             if not self._loyalty_settings:
                 raise ValidationError({"detail": "Loyalty settings not configured."})
-            self._discount_amount = self._loyalty_points_used * self._loyalty_settings.point_value_npr
+
+            # Auto-redeem all available points, capped so discount doesn't exceed subtotal.
+            point_value = self._loyalty_settings.point_value_npr
+            max_points_for_bill = int(self._subtotal // point_value) if point_value else 0
+            self._loyalty_points_used = min(self._customer.total_points, max_points_for_bill)
+            self._discount_amount = self._loyalty_points_used * point_value
 
         self._total_amount = self._subtotal - self._discount_amount
 
