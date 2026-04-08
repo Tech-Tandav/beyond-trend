@@ -303,10 +303,18 @@ class PublicInventoryView(APIView):
 
     def get(self, request):
         from django.contrib.postgres.aggregates import ArrayAgg
+        from django.db.models import OuterRef, Subquery
+
+        from beyond_trend.inventory.models import ProductImage
+
+        primary_image = ProductImage.objects.filter(
+            product=OuterRef("pk"),
+        ).order_by("-is_primary", "order", "created_at").values("image")[:1]
 
         rows = (
             Product.objects.filter(is_published=True)
-            .values("slug", "model", "image", brand_name=Coalesce("brand__name", Value("")))
+            .annotate(primary_image=Subquery(primary_image))
+            .values("slug", "model", "primary_image", brand_name=Coalesce("brand__name", Value("")))
             .annotate(
                 colors=ArrayAgg("color", distinct=True, ordering="color"),
                 sizes=ArrayAgg("size", distinct=True, ordering="size"),
@@ -328,7 +336,7 @@ class PublicInventoryView(APIView):
                 "size": row["sizes"],
                 "barcode": row["barcodes"],
                 "quantity": row["total_quantity"],
-                "image": row.get("image"),
+                "image": row.get("primary_image"),
             }
             for row in page
         ]

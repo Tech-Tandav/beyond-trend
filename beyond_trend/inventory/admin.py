@@ -3,7 +3,7 @@ from django.contrib import admin
 from beyond_trend.core.admin import BaseModelAdmin, BasePublishModelAdmin
 from beyond_trend.core.excel import ExcelExportMixin
 
-from beyond_trend.inventory.models import Vendor, Brand, InventoryLog, Product
+from beyond_trend.inventory.models import Vendor, Brand, InventoryLog, Product, ProductImage
 
 
 @admin.register(Vendor)
@@ -19,12 +19,19 @@ class BrandAdmin(BaseModelAdmin):
     prepopulated_fields = {"slug": ("name",)}
 
 
+class ProductImageInline(admin.TabularInline):
+    model = ProductImage
+    extra = 1
+    fields = ["image", "is_primary", "order"]
+
+
 @admin.register(Product)
 class ProductAdmin(ExcelExportMixin, BasePublishModelAdmin):
     list_display = ["brand", "model", "color", "size", "quantity", "is_published", "is_archived", "created_at"]
     list_filter = ["brand", "is_published", "is_archived"]
     search_fields = ["model", "brand__name", "id"]
     actions = ["archive", "restore", "publish", "hide", "export_to_excel"]
+    inlines = [ProductImageInline]
 
     excel_export_fields = [
         ("Product ID", "id"),

@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from beyond_trend.core.serializers import BaseModelSerializer
 
-from beyond_trend.inventory.models import Brand, InventoryLog, Product, Vendor
+from beyond_trend.inventory.models import Brand, InventoryLog, Product, ProductImage, Vendor
 
 
 class VendorSerializer(BaseModelSerializer):
@@ -20,12 +20,25 @@ class BrandSerializer(BaseModelSerializer):
         read_only_fields = ["id", "slug", "created_at"]
 
 
+class ProductImageSerializer(BaseModelSerializer):
+    class Meta(BaseModelSerializer.Meta):
+        model = ProductImage
+        fields = ["id", "product", "image", "is_primary", "order", "created_at"]
+        read_only_fields = ["id", "created_at"]
+
+
 class ProductSerializer(BaseModelSerializer):
     selling_price = serializers.DecimalField(
         max_digits=10, decimal_places=2, required=False, allow_null=True
     )
     is_low_stock = serializers.BooleanField(read_only=True)
     is_out_of_stock = serializers.BooleanField(read_only=True)
+    images = ProductImageSerializer(many=True, read_only=True)
+    uploaded_images = serializers.ListField(
+        child=serializers.ImageField(),
+        write_only=True,
+        required=False,
+    )
 
     class Meta(BaseModelSerializer.Meta):
         model = Product
@@ -38,7 +51,8 @@ class ProductSerializer(BaseModelSerializer):
             "model",
             "vendor",
             "description",
-            "image",
+            "images",
+            "uploaded_images",
             "size",
             "color",
             "barcode",
@@ -49,6 +63,32 @@ class ProductSerializer(BaseModelSerializer):
             "is_out_of_stock",
         ]
         read_only_fields = ["id", "slug", "created_at", "is_low_stock", "is_out_of_stock"]
+
+    def create(self, validated_data):
+        uploaded_images = validated_data.pop("uploaded_images", [])
+        product = super().create(validated_data)
+        for index, image in enumerate(uploaded_images):
+            ProductImage.objects.create(
+                product=product,
+                image=image,
+                is_primary=(index == 0),
+                order=index,
+            )
+        return product
+
+    def update(self, instance, validated_data):
+        uploaded_images = validated_data.pop("uploaded_images", None)
+        product = super().update(instance, validated_data)
+        if uploaded_images:
+            existing_count = product.images.count()
+            for index, image in enumerate(uploaded_images):
+                ProductImage.objects.create(
+                    product=product,
+                    image=image,
+                    is_primary=(existing_count == 0 and index == 0),
+                    order=existing_count + index,
+                )
+        return product
 
 
 class InventoryLogSerializer(BaseModelSerializer):

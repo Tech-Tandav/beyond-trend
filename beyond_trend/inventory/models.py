@@ -44,7 +44,6 @@ class Product(BaseModelWithSlug):
         related_name="products",
     )
     description = models.TextField(_("Description"), blank=True)
-    image = models.ImageField(_("Image"), upload_to="products/", null=True, blank=True)
     is_published = models.BooleanField(_("Published"), default=True)
     size = models.CharField(_("Size"), max_length=20)
     color = models.CharField(_("Color"), max_length=50)
@@ -72,6 +71,23 @@ class Product(BaseModelWithSlug):
     @property
     def is_out_of_stock(self):
         return self.quantity == 0
+
+
+class ProductImage(BaseModel):
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name="images",
+    )
+    image = models.ImageField(_("Image"), upload_to="products/")
+    is_primary = models.BooleanField(_("Primary"), default=False)
+    order = models.PositiveIntegerField(_("Order"), default=0)
+
+    class Meta:
+        ordering = ["-is_primary", "order", "created_at"]
+
+    def __str__(self):
+        return f"Image for {self.product}"
 
 
 class InventoryLog(BaseModel):
