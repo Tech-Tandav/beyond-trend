@@ -6,6 +6,7 @@ from django.utils import timezone
 from openpyxl import Workbook
 from openpyxl.styles import Font
 from openpyxl.utils import get_column_letter
+from rest_framework.generics import GenericAPIView
 
 
 def resolve_attr(obj, path):
@@ -92,3 +93,34 @@ class ExcelExportMixin:
         return workbook_response(wb, filename)
 
     export_to_excel.short_description = "Export selected to Excel"
+
+
+class ExcelExportAPIView(GenericAPIView):
+    """Generic API view that streams a filtered queryset as an .xlsx file.
+
+    Subclasses set ``excel_export_fields`` (list of ``(label, attr_path)``
+    tuples), and may override ``get_excel_sheets`` to add extra sheets.
+    The view honours the same filter_backends / filterset_class as a normal
+    DRF list view, so callers can re-use the existing query string filters.
+    """
+
+    excel_export_fields: list = []
+    excel_sheet_name: str = "Sheet1"
+    excel_filename_prefix: str = "export"
+
+    def get_excel_sheets(self, queryset):
+        headers = [label for label, _ in self.excel_export_fields]
+        rows = [
+            [resolve_attr(obj, path) for _, path in self.excel_export_fields]
+            for obj in queryset
+        ]
+        return [{"name": self.excel_sheet_name, "headers": headers, "rows": rows}]
+
+    def get(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        sheets = self.get_excel_sheets(queryset)
+        wb = build_workbook(sheets)
+        filename = (
+            f"{self.excel_filename_prefix}_{timezone.now():%Y%m%d_%H%M%S}.xlsx"
+        )
+        return workbook_response(wb, filename)

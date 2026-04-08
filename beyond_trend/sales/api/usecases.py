@@ -154,9 +154,23 @@ class CheckoutUseCase(BaseUseCase):
                 )
 
         if self._order is not None:
+            # Sync any selling-price overrides applied at checkout back onto the
+            # order's line items, then refresh the order total.
+            price_by_product = {
+                str(item["product"].id): item["selling_price"] for item in self._items
+            }
+            order_total = 0
+            for order_item in self._order.items.all():
+                new_price = price_by_product.get(str(order_item.product_id))
+                if new_price is not None and new_price != order_item.price:
+                    order_item.price = new_price
+                    order_item.save(update_fields=["price"])
+                order_total += order_item.price * order_item.quantity
+
+            self._order.total_amount = order_total
             # Order has been fulfilled by this sale — mark it delivered.
             self._order.status = Order.DELIVERED
-            self._order.save(update_fields=["status"])
+            self._order.save(update_fields=["status", "total_amount"])
 
         if self._customer:
             if not self._loyalty_settings:

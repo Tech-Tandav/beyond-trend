@@ -11,6 +11,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from beyond_trend.core.excel import ExcelExportAPIView
 from beyond_trend.core.viewsets import BaseModelViewSet
 
 from beyond_trend.sales.models import Sale
@@ -127,3 +128,62 @@ class SaleViewSet(BaseModelViewSet):
             SaleSerializer(sale, context=self.get_serializer_context()).data,
             status=status.HTTP_201_CREATED,
         )
+
+
+@extend_schema(
+    tags=["Sales"],
+    summary="Export sales to Excel",
+    description=(
+        "Streams the filtered sales list as an `.xlsx` workbook with two sheets: "
+        "`Sales` (one row per sale) and `Sale Items` (one row per line item). "
+        "Accepts the same filters as the sales list endpoint."
+    ),
+    parameters=[
+        OpenApiParameter("staff", OpenApiTypes.UUID, OpenApiParameter.QUERY),
+        OpenApiParameter("customer", OpenApiTypes.UUID, OpenApiParameter.QUERY),
+        OpenApiParameter("date_from", OpenApiTypes.DATE, OpenApiParameter.QUERY),
+        OpenApiParameter("date_to", OpenApiTypes.DATE, OpenApiParameter.QUERY),
+    ],
+    responses={(200, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"): OpenApiTypes.BINARY},
+)
+class SaleExcelExportAPIView(ExcelExportAPIView):
+    queryset = Sale.objects.select_related("staff", "customer").prefetch_related(
+        "items__product"
+    )
+    permission_classes = [IsAuthenticated]
+    filterset_class = SaleFilter
+    serializer_class = SaleSerializer
+
+    excel_sheet_name = "Sales"
+    excel_filename_prefix = "sales"
+    excel_export_fields = [
+        ("Sale ID", "id"),
+        ("Staff", "staff"),
+        ("Customer", "customer"),
+        ("Subtotal", "subtotal"),
+        ("Discount", "discount_amount"),
+        ("Total", "total_amount"),
+        ("Loyalty Points Used", "loyalty_points_used"),
+        ("Loyalty Points Earned", "loyalty_points_earned"),
+        ("Notes", "notes"),
+        ("Created At", "created_at"),
+    ]
+
+    def get_excel_sheets(self, queryset):
+        sheets = super().get_excel_sheets(queryset)
+        item_rows = []
+        for sale in queryset:
+            for item in sale.items.all():
+                item_rows.append([
+                    str(sale.id),
+                    str(item.product),
+                    item.quantity,
+                    item.selling_price,
+                    item.total,
+                ])
+        sheets.append({
+            "name": "Sale Items",
+            "headers": ["Sale ID", "Product", "Quantity", "Selling Price", "Line Total"],
+            "rows": item_rows,
+        })
+        return sheets

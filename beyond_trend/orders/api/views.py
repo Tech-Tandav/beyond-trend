@@ -12,6 +12,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from beyond_trend.core.excel import ExcelExportAPIView
 from beyond_trend.core.viewsets import BaseModelViewSet
 
 from beyond_trend.orders.models import Order, PreOrder
@@ -205,3 +206,89 @@ class PreOrderViewSet(BaseModelViewSet):
     def fulfill(self, request, pk=None):
         use_case = FulfillPreOrderUseCase(pre_order=self.get_object())
         return Response(use_case.execute())
+
+
+@extend_schema(
+    tags=["Orders"],
+    summary="Export orders to Excel",
+    description=(
+        "Streams the filtered order list as an `.xlsx` workbook with two sheets: "
+        "`Orders` (one row per order) and `Order Items` (one row per line item). "
+        "Accepts the same query string filters as the order list endpoint."
+    ),
+    parameters=[
+        OpenApiParameter("status", OpenApiTypes.STR, OpenApiParameter.QUERY, enum=[c[0] for c in Order.STATUS_CHOICES]),
+        OpenApiParameter("loyalty_customer", OpenApiTypes.UUID, OpenApiParameter.QUERY),
+        OpenApiParameter("date_from", OpenApiTypes.DATE, OpenApiParameter.QUERY),
+        OpenApiParameter("date_to", OpenApiTypes.DATE, OpenApiParameter.QUERY),
+    ],
+    responses={(200, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"): OpenApiTypes.BINARY},
+)
+class OrderExcelExportAPIView(ExcelExportAPIView):
+    queryset = Order.objects.prefetch_related("items__product__brand").all()
+    permission_classes = [IsAuthenticated]
+    filterset_class = OrderFilter
+    serializer_class = OrderSerializer
+
+    excel_sheet_name = "Orders"
+    excel_filename_prefix = "orders"
+    excel_export_fields = [
+        ("Order ID", "id"),
+        ("Customer", "customer_name"),
+        ("Email", "email"),
+        ("Phone", "phone"),
+        ("Status", "get_status_display"),
+        ("Total Amount", "total_amount"),
+        ("Notes", "notes"),
+        ("Loyalty Customer", "loyalty_customer"),
+        ("Created At", "created_at"),
+    ]
+
+    def get_excel_sheets(self, queryset):
+        sheets = super().get_excel_sheets(queryset)
+        item_rows = []
+        for order in queryset:
+            for item in order.items.all():
+                item_rows.append([
+                    str(order.id),
+                    order.customer_name,
+                    str(item.product),
+                    item.quantity,
+                    item.price,
+                    item.total,
+                ])
+        sheets.append({
+            "name": "Order Items",
+            "headers": ["Order ID", "Customer", "Product", "Quantity", "Price", "Line Total"],
+            "rows": item_rows,
+        })
+        return sheets
+
+
+@extend_schema(
+    tags=["Pre-Orders"],
+    summary="Export pre-orders to Excel",
+    description="Streams the filtered pre-order list as an `.xlsx` workbook.",
+    responses={(200, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"): OpenApiTypes.BINARY},
+)
+class PreOrderExcelExportAPIView(ExcelExportAPIView):
+    queryset = PreOrder.objects.all()
+    permission_classes = [IsAuthenticated]
+    filterset_class = PreOrderFilter
+    serializer_class = PreOrderSerializer
+
+    excel_sheet_name = "Pre-Orders"
+    excel_filename_prefix = "pre_orders"
+    excel_export_fields = [
+        ("Pre-Order ID", "id"),
+        ("Customer", "customer_name"),
+        ("Email", "email"),
+        ("Phone", "phone"),
+        ("Product Name", "product_name"),
+        ("Brand", "brand"),
+        ("Size", "size"),
+        ("Color", "color"),
+        ("Status", "get_status_display"),
+        ("Notes", "notes"),
+        ("Created At", "created_at"),
+    ]

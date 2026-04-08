@@ -15,6 +15,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from beyond_trend.core.excel import ExcelExportAPIView
 from beyond_trend.core.pagination import CustomPagination
 from beyond_trend.core.viewsets import BaseModelViewSet
 
@@ -333,3 +334,45 @@ class PublicInventoryView(APIView):
         ]
 
         return paginator.get_paginated_response(result)
+
+
+@extend_schema(
+    tags=["Inventory - Products"],
+    summary="Export products to Excel",
+    description=(
+        "Streams the filtered product catalog as an `.xlsx` workbook. "
+        "Accepts the same query string filters as the product list endpoint "
+        "(brand, model, size, color, barcode, is_published)."
+    ),
+    parameters=[
+        OpenApiParameter("brand", OpenApiTypes.STR, OpenApiParameter.QUERY),
+        OpenApiParameter("model", OpenApiTypes.STR, OpenApiParameter.QUERY),
+        OpenApiParameter("size", OpenApiTypes.STR, OpenApiParameter.QUERY),
+        OpenApiParameter("color", OpenApiTypes.STR, OpenApiParameter.QUERY),
+        OpenApiParameter("is_published", OpenApiTypes.BOOL, OpenApiParameter.QUERY),
+    ],
+    responses={(200, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"): OpenApiTypes.BINARY},
+)
+class ProductExcelExportAPIView(ExcelExportAPIView):
+    queryset = Product.objects.select_related("brand", "vendor").all()
+    permission_classes = [IsAuthenticated]
+    filterset_class = ProductFilter
+    serializer_class = ProductSerializer
+
+    excel_sheet_name = "Products"
+    excel_filename_prefix = "products"
+    excel_export_fields = [
+        ("Product ID", "id"),
+        ("Brand", "brand__name"),
+        ("Model", "model"),
+        ("Size", "size"),
+        ("Color", "color"),
+        ("Barcode", "barcode"),
+        ("Vendor", "vendor__name"),
+        ("Selling Price", "selling_price"),
+        ("Quantity", "quantity"),
+        ("Low Stock Threshold", "low_stock_threshold"),
+        ("Published", "is_published"),
+        ("Archived", "is_archived"),
+        ("Created At", "created_at"),
+    ]
