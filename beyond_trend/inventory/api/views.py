@@ -1,8 +1,10 @@
 from django.db.models import F, Sum, Value
 from django.db.models.functions import Coalesce
 
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
     OpenApiExample,
+    OpenApiParameter,
     OpenApiResponse,
     extend_schema,
     extend_schema_view,
@@ -46,6 +48,10 @@ StockMovementResponseSerializer = inline_serializer(
         tags=["Inventory - Vendors"],
         summary="List vendors",
         description="Returns a paginated list of vendors. Supports `?search=` by name and `?ordering=name`.",
+        parameters=[
+            OpenApiParameter("search", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Search by vendor name."),
+            OpenApiParameter("ordering", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Order by: name (prefix `-` for descending)."),
+        ],
     ),
     retrieve=extend_schema(tags=["Inventory - Vendors"], summary="Get a vendor"),
     create=extend_schema(tags=["Inventory - Vendors"], summary="Create a vendor"),
@@ -66,6 +72,10 @@ class VendorViewSet(BaseModelViewSet):
         tags=["Inventory - Brands"],
         summary="List brands",
         description="Returns a paginated list of brands. Supports `?search=` by name.",
+        parameters=[
+            OpenApiParameter("search", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Search by brand name."),
+            OpenApiParameter("ordering", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Order by: name (prefix `-` for descending)."),
+        ],
     ),
     retrieve=extend_schema(tags=["Inventory - Brands"], summary="Get a brand"),
     create=extend_schema(tags=["Inventory - Brands"], summary="Create a brand"),
@@ -91,6 +101,16 @@ class BrandViewSet(BaseModelViewSet):
         "`model`, `description`, `brand__name`, `barcode`, `size`, `color`, and "
         "ordering by `model`, `created_at`, `size`, `color`."
     ),
+    parameters=[
+        OpenApiParameter("brand", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by brand slug (exact match)."),
+        OpenApiParameter("model", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by model name (case-insensitive contains)."),
+        OpenApiParameter("is_published", OpenApiTypes.BOOL, OpenApiParameter.QUERY, description="Filter by published flag."),
+        OpenApiParameter("barcode", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by barcode (case-insensitive exact)."),
+        OpenApiParameter("size", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by size (case-insensitive exact)."),
+        OpenApiParameter("color", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by color (case-insensitive contains)."),
+        OpenApiParameter("search", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Free-text search across model, description, brand name, barcode, size, color."),
+        OpenApiParameter("ordering", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Order by: model, created_at, size, color (prefix `-` for descending)."),
+    ],
 )
 class ProductListView(generics.ListAPIView):
     serializer_class = ProductSerializer
@@ -223,6 +243,11 @@ class ProductCheckOutView(APIView):
         tags=["Inventory - Stock"],
         summary="List stock levels",
         description="Returns the current stock quantity for every product variant.",
+        parameters=[
+            OpenApiParameter("product", OpenApiTypes.UUID, OpenApiParameter.QUERY, description="Filter by product variant UUID."),
+            OpenApiParameter("brand", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by brand slug."),
+            OpenApiParameter("ordering", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Order by: quantity, variant__product__name (prefix `-` for descending)."),
+        ],
     ),
     retrieve=extend_schema(tags=["Inventory - Stock"], summary="Get stock for a variant"),
     partial_update=extend_schema(
@@ -274,6 +299,21 @@ class StockViewSet(BaseModelViewSet):
         tags=["Inventory - Logs"],
         summary="List inventory log entries",
         description="Read-only audit trail of every stock movement (check-ins, check-outs, sales).",
+        parameters=[
+            OpenApiParameter("variant", OpenApiTypes.UUID, OpenApiParameter.QUERY, description="Filter by variant UUID."),
+            OpenApiParameter(
+                "action",
+                OpenApiTypes.STR,
+                OpenApiParameter.QUERY,
+                description="Filter by action type.",
+                enum=[choice[0] for choice in InventoryLog.ACTION_CHOICES],
+            ),
+            OpenApiParameter("staff", OpenApiTypes.UUID, OpenApiParameter.QUERY, description="Filter by staff user UUID."),
+            OpenApiParameter("date_from", OpenApiTypes.DATE, OpenApiParameter.QUERY, description="Filter logs created on or after this date (YYYY-MM-DD)."),
+            OpenApiParameter("date_to", OpenApiTypes.DATE, OpenApiParameter.QUERY, description="Filter logs created on or before this date (YYYY-MM-DD)."),
+            OpenApiParameter("search", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Search in notes."),
+            OpenApiParameter("ordering", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Order by: created_at, action, quantity (prefix `-` for descending)."),
+        ],
     ),
     retrieve=extend_schema(tags=["Inventory - Logs"], summary="Get a log entry"),
 )

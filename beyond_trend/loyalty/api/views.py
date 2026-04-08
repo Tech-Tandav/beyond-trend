@@ -1,5 +1,7 @@
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
     OpenApiExample,
+    OpenApiParameter,
     OpenApiResponse,
     extend_schema,
     extend_schema_view,
@@ -39,6 +41,14 @@ RedeemResponseSerializer = inline_serializer(
         tags=["Loyalty - Customers"],
         summary="List loyalty customers",
         description="Paginated list of loyalty customers. Supports `?search=` on name / email / phone and ordering by `name`, `total_points`, `created_at`.",
+        parameters=[
+            OpenApiParameter("email", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by exact email."),
+            OpenApiParameter("email__icontains", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by email (case-insensitive contains)."),
+            OpenApiParameter("phone", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by exact phone."),
+            OpenApiParameter("phone__icontains", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by phone (case-insensitive contains)."),
+            OpenApiParameter("search", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Search across name, email, phone."),
+            OpenApiParameter("ordering", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Order by: name, total_points, created_at (prefix `-` for descending)."),
+        ],
     ),
     retrieve=extend_schema(tags=["Loyalty - Customers"], summary="Get a customer"),
     create=extend_schema(tags=["Loyalty - Customers"], summary="Create a customer"),
@@ -113,6 +123,19 @@ class CustomerViewSet(BaseModelViewSet):
         tags=["Loyalty - Transactions"],
         summary="List loyalty transactions",
         description="Read-only ledger of every point movement (`EARN`, `REDEEM`, `ADJUST`).",
+        parameters=[
+            OpenApiParameter("customer", OpenApiTypes.UUID, OpenApiParameter.QUERY, description="Filter by loyalty customer UUID."),
+            OpenApiParameter(
+                "type",
+                OpenApiTypes.STR,
+                OpenApiParameter.QUERY,
+                description="Filter by transaction type.",
+                enum=[choice[0] for choice in LoyaltyTransaction.TYPE_CHOICES],
+            ),
+            OpenApiParameter("date_from", OpenApiTypes.DATE, OpenApiParameter.QUERY, description="Filter transactions on or after this date (YYYY-MM-DD)."),
+            OpenApiParameter("date_to", OpenApiTypes.DATE, OpenApiParameter.QUERY, description="Filter transactions on or before this date (YYYY-MM-DD)."),
+            OpenApiParameter("ordering", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Order by: created_at, points, type (prefix `-` for descending)."),
+        ],
     ),
     retrieve=extend_schema(tags=["Loyalty - Transactions"], summary="Get a transaction"),
 )

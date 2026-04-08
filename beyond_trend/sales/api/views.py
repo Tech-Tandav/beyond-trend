@@ -1,5 +1,7 @@
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
     OpenApiExample,
+    OpenApiParameter,
     OpenApiResponse,
     extend_schema,
     extend_schema_view,
@@ -26,6 +28,14 @@ from beyond_trend.sales.api.usecases import CheckoutUseCase
             "Supports filtering via `SaleFilter`, `?search=` on customer / staff name, "
             "and `?ordering=` on `created_at`, `total_amount`, `subtotal`."
         ),
+        parameters=[
+            OpenApiParameter("customer", OpenApiTypes.UUID, OpenApiParameter.QUERY, description="Filter by loyalty customer UUID."),
+            OpenApiParameter("staff", OpenApiTypes.UUID, OpenApiParameter.QUERY, description="Filter by staff user UUID."),
+            OpenApiParameter("date_from", OpenApiTypes.DATE, OpenApiParameter.QUERY, description="Filter sales on or after this date (YYYY-MM-DD)."),
+            OpenApiParameter("date_to", OpenApiTypes.DATE, OpenApiParameter.QUERY, description="Filter sales on or before this date (YYYY-MM-DD)."),
+            OpenApiParameter("search", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Search across customer name, customer email, staff name."),
+            OpenApiParameter("ordering", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Order by: created_at, total_amount, subtotal (prefix `-` for descending)."),
+        ],
     ),
     retrieve=extend_schema(
         tags=["Sales"],
