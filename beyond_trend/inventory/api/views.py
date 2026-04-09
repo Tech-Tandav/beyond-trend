@@ -195,6 +195,27 @@ class ProductUpdateView(generics.UpdateAPIView):
     permission_classes = [IsAuthenticated]
     lookup_field = "slug"
 
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        # Snapshot current values for fields being sent
+        old_values = {}
+        for field in request.data:
+            if hasattr(instance, field):
+                old_values[field] = getattr(instance, field)
+
+        response = super().update(request, *args, **kwargs)
+
+        # Determine which fields actually changed
+        instance.refresh_from_db()
+        updated_fields = []
+        for field, old_val in old_values.items():
+            new_val = getattr(instance, field, None)
+            if str(old_val) != str(new_val):
+                updated_fields.append(field)
+
+        response.data["updated_fields"] = updated_fields
+        return response
+
 
 @extend_schema(
     tags=["Inventory - Products"],

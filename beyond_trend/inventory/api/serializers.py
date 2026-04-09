@@ -109,6 +109,8 @@ class ProductSerializer(BaseModelSerializer):
             "low_stock_threshold",
             "is_low_stock",
             "is_out_of_stock",
+            "show_in_website",
+            "is_featured",
         ]
         read_only_fields = ["id", "slug", "created_at", "is_low_stock", "is_out_of_stock"]
 
