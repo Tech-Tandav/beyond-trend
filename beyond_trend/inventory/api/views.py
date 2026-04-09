@@ -360,10 +360,15 @@ class PublicInventoryItemSerializer(serializers.Serializer):
     ),
     parameters=[
         OpenApiParameter("category", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by category slug."),
+        OpenApiParameter("category_name", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by category name (case-insensitive partial match)."),
         OpenApiParameter("subcategory", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by subcategory slug."),
+        OpenApiParameter("subcategory_name", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by subcategory name (case-insensitive partial match)."),
         OpenApiParameter("brand", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by brand slug."),
+        OpenApiParameter("brand_name", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by brand name (case-insensitive partial match)."),
         OpenApiParameter("color", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by color (case-insensitive partial match)."),
         OpenApiParameter("size", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by size (exact match)."),
+        OpenApiParameter("is_featured", OpenApiTypes.BOOL, OpenApiParameter.QUERY, description="Filter by featured flag."),
+        OpenApiParameter("show_in_website", OpenApiTypes.BOOL, OpenApiParameter.QUERY, description="Filter by show in website flag."),
         OpenApiParameter("search", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Search across model, brand name, description."),
         OpenApiParameter("ordering", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Order by: created_at, -created_at, updated_at, -updated_at, model, -model, brand_name, -brand_name, category_name, -category_name."),
     ],
@@ -396,13 +401,25 @@ class PublicInventoryView(APIView):
         if category:
             qs = qs.filter(category__slug=category)
 
+        category_name = request.query_params.get("category_name")
+        if category_name:
+            qs = qs.filter(category__name__icontains=category_name)
+
         subcategory = request.query_params.get("subcategory")
         if subcategory:
             qs = qs.filter(subcategory__slug=subcategory)
 
+        subcategory_name = request.query_params.get("subcategory_name")
+        if subcategory_name:
+            qs = qs.filter(subcategory__name__icontains=subcategory_name)
+
         brand = request.query_params.get("brand")
         if brand:
             qs = qs.filter(brand__slug=brand)
+
+        brand_name = request.query_params.get("brand_name")
+        if brand_name:
+            qs = qs.filter(brand__name__icontains=brand_name)
 
         color = request.query_params.get("color")
         if color:
@@ -411,6 +428,14 @@ class PublicInventoryView(APIView):
         size = request.query_params.get("size")
         if size:
             qs = qs.filter(size__iexact=size)
+
+        is_featured = request.query_params.get("is_featured")
+        if is_featured is not None:
+            qs = qs.filter(is_featured=is_featured.lower() in ("true", "1"))
+
+        show_in_website = request.query_params.get("show_in_website")
+        if show_in_website is not None:
+            qs = qs.filter(show_in_website=show_in_website.lower() in ("true", "1"))
 
         search = request.query_params.get("search")
         if search:
