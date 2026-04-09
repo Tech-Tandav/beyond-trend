@@ -156,7 +156,7 @@ class SubCategoryViewSet(BaseModelViewSet):
 )
 class ProductListView(generics.ListAPIView):
     serializer_class = ProductSerializer
-    queryset = Product.objects.select_related("brand").all()
+    queryset = Product.objects.select_related("brand", "category", "subcategory").all()
     permission_classes = [AllowAny]
     filterset_class = ProductFilter
     search_fields = ["model", "description", "brand__name", "barcode", "size", "color"]
@@ -170,7 +170,7 @@ class ProductListView(generics.ListAPIView):
 )
 class ProductCreateView(generics.CreateAPIView):
     serializer_class = ProductSerializer
-    queryset = Product.objects.select_related("brand").all()
+    queryset = Product.objects.select_related("brand", "category", "subcategory").all()
     permission_classes = [IsAuthenticated]
 
 
@@ -180,7 +180,7 @@ class ProductCreateView(generics.CreateAPIView):
 )
 class ProductRetrieveView(generics.RetrieveAPIView):
     serializer_class = ProductSerializer
-    queryset = Product.objects.select_related("brand").all()
+    queryset = Product.objects.select_related("brand", "category", "subcategory").all()
     permission_classes = [AllowAny]
     lookup_field = "barcode"
 
@@ -191,7 +191,7 @@ class ProductRetrieveView(generics.RetrieveAPIView):
 )
 class ProductUpdateView(generics.UpdateAPIView):
     serializer_class = ProductSerializer
-    queryset = Product.objects.select_related("brand").all()
+    queryset = Product.objects.select_related("brand", "category", "subcategory").all()
     permission_classes = [IsAuthenticated]
     lookup_field = "slug"
 
@@ -223,7 +223,7 @@ class ProductUpdateView(generics.UpdateAPIView):
 )
 class ProductDestroyView(generics.DestroyAPIView):
     serializer_class = ProductSerializer
-    queryset = Product.objects.select_related("brand").all()
+    queryset = Product.objects.select_related("brand", "category", "subcategory").all()
     permission_classes = [IsAuthenticated]
     lookup_field = "slug"
 
