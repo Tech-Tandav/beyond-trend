@@ -334,6 +334,29 @@ class InventoryLogViewSet(BaseModelViewSet):
     ordering_fields = ["created_at", "action", "quantity"]
 
 
+@extend_schema(
+    tags=["Inventory - Products"],
+    summary="List available sizes",
+    description="Returns a list of distinct product sizes currently in use, sorted alphabetically.",
+    responses={200: inline_serializer(
+        name="SizeListResponse",
+        fields={"sizes": serializers.ListField(child=serializers.CharField())},
+    )},
+)
+class SizeListView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        sizes = (
+            Product.objects
+            .exclude(size="")
+            .values_list("size", flat=True)
+            .distinct()
+            .order_by("size")
+        )
+        return Response({"sizes": list(sizes)})
+
+
 class PublicInventoryItemSerializer(serializers.Serializer):
     slug = serializers.CharField()
     brand_name = serializers.CharField()

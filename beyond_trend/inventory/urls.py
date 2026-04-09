@@ -16,6 +16,7 @@ from beyond_trend.inventory.api.views import (
     ProductRetrieveView,
     ProductUpdateView,
     PublicInventoryView,
+    SizeListView,
     SubCategoryViewSet,
     VendorViewSet,
 )
@@ -34,6 +35,7 @@ app_name = "inventory"
 urlpatterns = [
     path("analytics/", InventoryAnalyticsView.as_view(), name="inventory-analytics"),
     path("public-inventory/", PublicInventoryView.as_view(), name="inventory-public"),
+    path("sizes/", SizeListView.as_view(), name="size-list"),
     path("products/", ProductListView.as_view(), name="product-list"),
     path("products/create/", ProductCreateView.as_view(), name="product-create"),
     path("products/export/", ProductExcelExportAPIView.as_view(), name="product-export"),
