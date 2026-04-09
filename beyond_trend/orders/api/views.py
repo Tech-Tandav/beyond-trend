@@ -79,12 +79,12 @@ class OrderRetrieveAPIView(generics.RetrieveAPIView):
     tags=["Orders"],
     summary="Create an order",
     description=(
-        "Public endpoint used by the storefront checkout. Creates a new order with the "
-        "supplied items and computes `total_amount` from current product prices.\n\n"
-        "Returns the full order including line items."
+        "Public endpoint used by the storefront checkout. Each item in the request "
+        "creates a separate order so they can be checked out independently.\n\n"
+        "Returns a list of created orders, each with its line item."
     ),
     request=CreateOrderSerializer,
-    responses={201: OrderSerializer},
+    responses={201: OrderSerializer(many=True)},
     examples=[
         OpenApiExample(
             "Guest checkout",
@@ -113,9 +113,9 @@ class OrderCreateAPIView(generics.CreateAPIView):
             data=serializer.validated_data,
             staff=request.user if request.user.is_authenticated else None,
         )
-        order = use_case.execute()
+        orders = use_case.execute()
         return Response(
-            OrderSerializer(order, context={"request": request}).data,
+            OrderSerializer(orders, many=True, context={"request": request}).data,
             status=status.HTTP_201_CREATED,
         )
 

@@ -24,7 +24,6 @@ class CreateOrderUseCase(BaseUseCase):
         self._data = data
         self._staff = staff
         self._items_to_create = []  # list of (product, quantity, price)
-        self._total_amount = 0
 
     def is_valid(self):
         for item in self._data["items"]:
@@ -36,7 +35,6 @@ class CreateOrderUseCase(BaseUseCase):
                 raise NotFound(f"Product {product_id} not found.")
 
             price = item.get("selling_price") or product.selling_price or 0
-            self._total_amount += price * quantity
             self._items_to_create.append((product, quantity, price))
 
     @transaction.atomic
@@ -61,16 +59,19 @@ class CreateOrderUseCase(BaseUseCase):
             locked.save(update_fields=["quantity"])
 
         phone = self._data.get("phone", "")
-
-        order = Order.objects.create(
-            customer_name=self._data["customer_name"],
-            email=self._data["email"],
-            phone=phone,
-            notes=self._data.get("notes", ""),
-            total_amount=self._total_amount,
-        )
+        orders = []
 
         for product, quantity, price in self._items_to_create:
+            total_amount = price * quantity
+
+            order = Order.objects.create(
+                customer_name=self._data["customer_name"],
+                email=self._data["email"],
+                phone=phone,
+                notes=self._data.get("notes", ""),
+                total_amount=total_amount,
+            )
+
             OrderItem.objects.create(
                 order=order,
                 product=product,
@@ -84,8 +85,9 @@ class CreateOrderUseCase(BaseUseCase):
                 staff=self._staff,
                 notes=f"Order {order.id}",
             )
+            orders.append(order)
 
-        return order
+        return orders
 
 
 class UpdateOrderStatusUseCase(BaseUseCase):
