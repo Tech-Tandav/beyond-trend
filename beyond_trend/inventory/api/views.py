@@ -19,15 +19,24 @@ from beyond_trend.core.excel import ExcelExportAPIView
 from beyond_trend.core.pagination import CustomPagination
 from beyond_trend.core.viewsets import BaseModelViewSet
 
-from beyond_trend.inventory.models import Vendor, Brand, InventoryLog, Product
+from beyond_trend.inventory.models import (
+    Brand,
+    Category,
+    InventoryLog,
+    Product,
+    SubCategory,
+    Vendor,
+)
 from beyond_trend.inventory.api.filters import InventoryLogFilter, ProductFilter
 from beyond_trend.inventory.api.serializers import (
-    VendorSerializer,
     BrandSerializer,
+    CategorySerializer,
     CheckInSerializer,
     CheckOutSerializer,
     InventoryLogSerializer,
     ProductSerializer,
+    SubCategorySerializer,
+    VendorSerializer,
 )
 from beyond_trend.inventory.api.usecases import CheckInUseCase, CheckOutUseCase
 
@@ -88,6 +97,40 @@ class BrandViewSet(BaseModelViewSet):
     permission_classes = [IsAuthenticated]
     search_fields = ["name"]
     ordering_fields = ["name"]
+
+
+@extend_schema_view(
+    list=extend_schema(tags=["Inventory - Categories"], summary="List categories"),
+    retrieve=extend_schema(tags=["Inventory - Categories"], summary="Get a category"),
+    create=extend_schema(tags=["Inventory - Categories"], summary="Create a category"),
+    update=extend_schema(tags=["Inventory - Categories"], summary="Replace a category"),
+    partial_update=extend_schema(tags=["Inventory - Categories"], summary="Patch a category"),
+    destroy=extend_schema(tags=["Inventory - Categories"], summary="Archive a category"),
+)
+class CategoryViewSet(BaseModelViewSet):
+    serializer_class = CategorySerializer
+    queryset = Category.objects.prefetch_related("subcategories").all()
+    permission_classes = [IsAuthenticated]
+    search_fields = ["name"]
+    ordering_fields = ["name", "created_at"]
+    filterset_fields = ["is_active", "is_archived"]
+
+
+@extend_schema_view(
+    list=extend_schema(tags=["Inventory - Sub Categories"], summary="List sub categories"),
+    retrieve=extend_schema(tags=["Inventory - Sub Categories"], summary="Get a sub category"),
+    create=extend_schema(tags=["Inventory - Sub Categories"], summary="Create a sub category"),
+    update=extend_schema(tags=["Inventory - Sub Categories"], summary="Replace a sub category"),
+    partial_update=extend_schema(tags=["Inventory - Sub Categories"], summary="Patch a sub category"),
+    destroy=extend_schema(tags=["Inventory - Sub Categories"], summary="Archive a sub category"),
+)
+class SubCategoryViewSet(BaseModelViewSet):
+    serializer_class = SubCategorySerializer
+    queryset = SubCategory.objects.select_related("category").all()
+    permission_classes = [IsAuthenticated]
+    search_fields = ["name", "category__name"]
+    ordering_fields = ["name", "created_at"]
+    filterset_fields = ["category", "is_active", "is_archived"]
 
 
 @extend_schema(
@@ -273,6 +316,8 @@ class InventoryLogViewSet(BaseModelViewSet):
 class PublicInventoryItemSerializer(serializers.Serializer):
     slug = serializers.CharField()
     brand_name = serializers.CharField()
+    category_name = serializers.CharField(allow_blank=True)
+    subcategory_name = serializers.CharField(allow_blank=True)
     model = serializers.CharField()
     color = serializers.ListField(child=serializers.CharField())
     size = serializers.ListField(child=serializers.CharField())
@@ -315,14 +360,22 @@ class PublicInventoryView(APIView):
         rows = (
             Product.objects.filter(is_published=True)
             .annotate(primary_image=Subquery(primary_image))
-            .values("pk", "slug", "model", "primary_image", brand_name=Coalesce("brand__name", Value("")))
+            .values(
+                "pk",
+                "slug",
+                "model",
+                "primary_image",
+                brand_name=Coalesce("brand__name", Value("")),
+                category_name=Coalesce("category__name", Value("")),
+                subcategory_name=Coalesce("subcategory__name", Value("")),
+            )
             .annotate(
                 colors=ArrayAgg("color", distinct=True, ordering="color"),
                 sizes=ArrayAgg("size", distinct=True, ordering="size"),
                 barcodes=ArrayAgg("barcode", distinct=True, ordering="barcode"),
                 total_quantity=Coalesce(Sum("quantity"), 0),
             )
-            .order_by("brand_name", "model")
+            .order_by("category_name", "subcategory_name", "brand_name", "model")
         )
 
         paginator = self.pagination_class()
@@ -355,6 +408,8 @@ class PublicInventoryView(APIView):
             {
                 "slug": row["slug"],
                 "brand_name": row["brand_name"],
+                "category_name": row["category_name"],
+                "subcategory_name": row["subcategory_name"],
                 "model": row["model"],
                 "color": row["colors"],
                 "size": row["sizes"],

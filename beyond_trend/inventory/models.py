@@ -27,9 +27,57 @@ class Brand(BaseModelWithSlug):
         return self.name
 
 
+class Category(BaseModelWithSlug):
+    name = models.CharField(_("Category Name"), max_length=100, unique=True)
+    description = models.TextField(_("Description"), blank=True)
+    is_active = models.BooleanField(_("Active"), default=True)
+
+    class Meta:
+        verbose_name = _("Category")
+        verbose_name_plural = _("Categories")
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+class SubCategory(BaseModelWithSlug):
+    category = models.ForeignKey(
+        Category,
+        on_delete=models.CASCADE,
+        related_name="subcategories",
+    )
+    name = models.CharField(_("Sub Category Name"), max_length=100)
+    description = models.TextField(_("Description"), blank=True)
+    is_active = models.BooleanField(_("Active"), default=True)
+
+    class Meta:
+        verbose_name = _("Sub Category")
+        verbose_name_plural = _("Sub Categories")
+        ordering = ["category__name", "name"]
+        unique_together = ["category", "name"]
+
+    def __str__(self):
+        return f"{self.category.name} > {self.name}"
+
+
 class Product(BaseModelWithSlug):
     brand = models.ForeignKey(
         Brand,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="products",
+    )
+    category = models.ForeignKey(
+        Category,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="products",
+    )
+    subcategory = models.ForeignKey(
+        SubCategory,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,

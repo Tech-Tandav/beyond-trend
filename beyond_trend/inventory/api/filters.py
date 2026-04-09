@@ -5,6 +5,8 @@ from beyond_trend.inventory.models import InventoryLog, Product
 
 class ProductFilter(django_filters.FilterSet):
     brand = django_filters.CharFilter(field_name="brand__slug")
+    category = django_filters.CharFilter(field_name="category__slug")
+    subcategory = django_filters.CharFilter(field_name="subcategory__slug")
     model = django_filters.CharFilter(lookup_expr="icontains")
     is_published = django_filters.BooleanFilter()
     barcode = django_filters.CharFilter(lookup_expr="iexact")
@@ -13,7 +15,16 @@ class ProductFilter(django_filters.FilterSet):
 
     class Meta:
         model = Product
-        fields = ["brand", "model", "is_published", "barcode", "size", "color"]
+        fields = [
+            "brand",
+            "category",
+            "subcategory",
+            "model",
+            "is_published",
+            "barcode",
+            "size",
+            "color",
+        ]
 
 
 

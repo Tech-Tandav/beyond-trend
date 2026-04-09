@@ -3,7 +3,15 @@ from django.contrib import admin
 from beyond_trend.core.admin import BaseModelAdmin, BasePublishModelAdmin
 from beyond_trend.core.excel import ExcelExportMixin
 
-from beyond_trend.inventory.models import Vendor, Brand, InventoryLog, Product, ProductImage
+from beyond_trend.inventory.models import (
+    Brand,
+    Category,
+    InventoryLog,
+    Product,
+    ProductImage,
+    SubCategory,
+    Vendor,
+)
 
 
 @admin.register(Vendor)
@@ -19,6 +27,30 @@ class BrandAdmin(BaseModelAdmin):
     prepopulated_fields = {"slug": ("name",)}
 
 
+class SubCategoryInline(admin.TabularInline):
+    model = SubCategory
+    extra = 1
+    fields = ["name", "slug", "is_active"]
+    prepopulated_fields = {"slug": ("name",)}
+
+
+@admin.register(Category)
+class CategoryAdmin(BaseModelAdmin):
+    list_display = ["name", "slug", "is_active", "is_archived", "created_at"]
+    list_filter = ["is_active", "is_archived"]
+    search_fields = ["name", "id"]
+    prepopulated_fields = {"slug": ("name",)}
+    inlines = [SubCategoryInline]
+
+
+@admin.register(SubCategory)
+class SubCategoryAdmin(BaseModelAdmin):
+    list_display = ["name", "category", "slug", "is_active", "is_archived", "created_at"]
+    list_filter = ["category", "is_active", "is_archived"]
+    search_fields = ["name", "category__name", "id"]
+    prepopulated_fields = {"slug": ("name",)}
+
+
 class ProductImageInline(admin.TabularInline):
     model = ProductImage
     extra = 1
@@ -27,15 +59,18 @@ class ProductImageInline(admin.TabularInline):
 
 @admin.register(Product)
 class ProductAdmin(ExcelExportMixin, BasePublishModelAdmin):
-    list_display = ["brand", "model", "color", "size", "quantity", "is_published", "is_archived", "created_at"]
-    list_filter = ["brand", "is_published", "is_archived"]
-    search_fields = ["model", "brand__name", "id"]
+    list_display = ["brand", "model", "category", "subcategory", "color", "size", "quantity", "is_published", "is_archived", "created_at"]
+    list_filter = ["brand", "category", "subcategory", "is_published", "is_archived"]
+    search_fields = ["model", "brand__name", "category__name", "subcategory__name", "id"]
+    autocomplete_fields = ["category", "subcategory", "brand", "vendor"]
     actions = ["archive", "restore", "publish", "hide", "export_to_excel"]
     inlines = [ProductImageInline]
 
     excel_export_fields = [
         ("Product ID", "id"),
         ("Brand", "brand__name"),
+        ("Category", "category__name"),
+        ("Sub Category", "subcategory__name"),
         ("Model", "model"),
         ("Size", "size"),
         ("Color", "color"),
@@ -53,7 +88,7 @@ class ProductAdmin(ExcelExportMixin, BasePublishModelAdmin):
 
     def get_excel_sheets(self, request, queryset):
         return super().get_excel_sheets(
-            request, queryset.select_related("brand", "vendor")
+            request, queryset.select_related("brand", "vendor", "category", "subcategory")
         )
 
 

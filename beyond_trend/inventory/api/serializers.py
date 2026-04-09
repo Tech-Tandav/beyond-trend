@@ -2,7 +2,15 @@ from rest_framework import serializers
 
 from beyond_trend.core.serializers import BaseModelSerializer
 
-from beyond_trend.inventory.models import Brand, InventoryLog, Product, ProductImage, Vendor
+from beyond_trend.inventory.models import (
+    Brand,
+    Category,
+    InventoryLog,
+    Product,
+    ProductImage,
+    SubCategory,
+    Vendor,
+)
 
 
 class VendorSerializer(BaseModelSerializer):
@@ -17,6 +25,40 @@ class BrandSerializer(BaseModelSerializer):
     class Meta(BaseModelSerializer.Meta):
         model = Brand
         fields = ["id", "name", "slug", "is_archived", "created_at"]
+        read_only_fields = ["id", "slug", "created_at"]
+
+
+class SubCategorySerializer(BaseModelSerializer):
+    class Meta(BaseModelSerializer.Meta):
+        model = SubCategory
+        fields = [
+            "id",
+            "category",
+            "name",
+            "slug",
+            "description",
+            "is_active",
+            "is_archived",
+            "created_at",
+        ]
+        read_only_fields = ["id", "slug", "created_at"]
+
+
+class CategorySerializer(BaseModelSerializer):
+    subcategories = SubCategorySerializer(many=True, read_only=True)
+
+    class Meta(BaseModelSerializer.Meta):
+        model = Category
+        fields = [
+            "id",
+            "name",
+            "slug",
+            "description",
+            "is_active",
+            "is_archived",
+            "created_at",
+            "subcategories",
+        ]
         read_only_fields = ["id", "slug", "created_at"]
 
 
@@ -48,6 +90,8 @@ class ProductSerializer(BaseModelSerializer):
             "is_archived",
             "created_at",
             "brand",
+            "category",
+            "subcategory",
             "model",
             "vendor",
             "description",
