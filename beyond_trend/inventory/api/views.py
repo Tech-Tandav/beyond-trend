@@ -333,8 +333,19 @@ class PublicInventoryItemSerializer(serializers.Serializer):
     description=(
         "Public, unauthenticated endpoint. Aggregates published variants by `brand + model` "
         "and returns the available colors, sizes, and total quantity in stock. Used by the "
-        "storefront to render product cards."
+        "storefront to render product cards.\n\n"
+        "Supports filtering by category, subcategory, brand (by slug), color, size, "
+        "and free-text search."
     ),
+    parameters=[
+        OpenApiParameter("category", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by category slug."),
+        OpenApiParameter("subcategory", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by subcategory slug."),
+        OpenApiParameter("brand", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by brand slug."),
+        OpenApiParameter("color", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by color (case-insensitive partial match)."),
+        OpenApiParameter("size", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by size (exact match)."),
+        OpenApiParameter("search", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Search across model, brand name, description."),
+        OpenApiParameter("ordering", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Order by: created_at, -created_at, updated_at, -updated_at, model, -model, brand_name, -brand_name, category_name, -category_name."),
+    ],
     responses={200: PublicInventoryItemSerializer(many=True)},
 )
 class PublicInventoryView(APIView):
@@ -357,8 +368,50 @@ class PublicInventoryView(APIView):
             product=OuterRef("pk"),
         ).order_by("-is_primary", "order", "created_at").values("image")[:1]
 
+        qs = Product.objects.filter(is_published=True)
+
+        # Apply filters from query params
+        category = request.query_params.get("category")
+        if category:
+            qs = qs.filter(category__slug=category)
+
+        subcategory = request.query_params.get("subcategory")
+        if subcategory:
+            qs = qs.filter(subcategory__slug=subcategory)
+
+        brand = request.query_params.get("brand")
+        if brand:
+            qs = qs.filter(brand__slug=brand)
+
+        color = request.query_params.get("color")
+        if color:
+            qs = qs.filter(color__icontains=color)
+
+        size = request.query_params.get("size")
+        if size:
+            qs = qs.filter(size__iexact=size)
+
+        search = request.query_params.get("search")
+        if search:
+            from django.db.models import Q
+            qs = qs.filter(
+                Q(model__icontains=search)
+                | Q(brand__name__icontains=search)
+                | Q(description__icontains=search)
+            )
+
+        # Ordering
+        ALLOWED_ORDERING = {
+            "created_at", "-created_at",
+            "updated_at", "-updated_at",
+            "model", "-model",
+            "brand_name", "-brand_name",
+            "category_name", "-category_name",
+        }
+        ordering_param = request.query_params.get("ordering")
+
         rows = (
-            Product.objects.filter(is_published=True)
+            qs
             .annotate(primary_image=Subquery(primary_image))
             .values(
                 "pk",
@@ -377,8 +430,12 @@ class PublicInventoryView(APIView):
                 barcodes=ArrayAgg("barcode", distinct=True, ordering="barcode"),
                 total_quantity=Coalesce(Sum("quantity"), 0),
             )
-            .order_by("category_name", "subcategory_name", "brand_name", "model")
         )
+
+        if ordering_param and ordering_param in ALLOWED_ORDERING:
+            rows = rows.order_by(ordering_param)
+        else:
+            rows = rows.order_by("category_name", "subcategory_name", "brand_name", "model")
 
         paginator = self.pagination_class()
         page = paginator.paginate_queryset(rows, request, view=self)

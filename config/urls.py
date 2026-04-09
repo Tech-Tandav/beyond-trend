@@ -39,6 +39,7 @@ urlpatterns += [
     path("api/v1/inventory/", include("beyond_trend.inventory.urls")),
     path("api/v1/orders/", include("beyond_trend.orders.urls")),
     path("api/v1/sales/", include("beyond_trend.sales.urls")),
+    path("api/v1/loyalty/", include("beyond_trend.loyalty.urls")),
     # DRF auth token
     path("api/auth-token/", obtain_auth_token, name="obtain_auth_token"),
     path("api/schema/", SpectacularAPIView.as_view(), name="api-schema"),

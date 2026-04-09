@@ -94,6 +94,7 @@ LOCAL_APPS = [
     "beyond_trend.inventory",
     "beyond_trend.orders",
     "beyond_trend.sales",
+    "beyond_trend.loyalty",
 ]
 # https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -415,6 +416,7 @@ SPECTACULAR_SETTINGS = {
         {"name": "Pre-Orders", "description": "Customer pre-orders for unavailable items."},
         {"name": "Sales", "description": "POS sales and checkout."},
         {"name": "Sales - Analytics", "description": "Sales dashboards and KPIs."},
+        {"name": "Loyalty", "description": "Customer loyalty program, points, and tiers."},
     ],
     "SWAGGER_UI_SETTINGS": {
         "deepLinking": True,
