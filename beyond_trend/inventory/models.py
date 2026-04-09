@@ -93,6 +93,8 @@ class Product(BaseModelWithSlug):
     )
     description = models.TextField(_("Description"), blank=True)
     is_published = models.BooleanField(_("Published"), default=True)
+    is_featured = models.BooleanField(_("Featured"), default=False)
+    show_in_website = models.BooleanField(_("Show in Website"), default=True)
     size = models.CharField(_("Size"), max_length=20)
     color = models.CharField(_("Color"), max_length=50)
     barcode = models.CharField(_("Barcode"), max_length=100, unique=True, blank=True)
