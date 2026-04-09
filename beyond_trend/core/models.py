@@ -106,8 +106,14 @@ class BaseModelWithSlug(BaseModel):
         original_slug = self.slug
         counter = 1
         # Use the model's manager (self.__class__) instead of BaseModelWithSlug.objects
-        while self.__class__.objects.filter(slug=self.slug).exists():
+        qs = self.__class__.objects.filter(slug=self.slug)
+        if self.pk:
+            qs = qs.exclude(pk=self.pk)
+        while qs.exists():
             self.slug = f"{original_slug}-{generate_random_string(3)}"
             counter += 1
+            qs = self.__class__.objects.filter(slug=self.slug)
+            if self.pk:
+                qs = qs.exclude(pk=self.pk)
 
         super().save(*args, **kwargs)
