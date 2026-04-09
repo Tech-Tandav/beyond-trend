@@ -7,31 +7,17 @@ from django.utils.translation import gettext_lazy as _
 from beyond_trend.core.models import BaseModel
 
 
-class LoyaltyTier(models.TextChoices):
-    BRONZE = "bronze", _("Bronze")
-    SILVER = "silver", _("Silver")
-    GOLD = "gold", _("Gold")
-    PLATINUM = "platinum", _("Platinum")
+# Only products in this subcategory earn loyalty points
+LOYALTY_ELIGIBLE_SUBCATEGORY_SLUG = "sneakers"
 
+# Flat points earned per sneaker sale
+POINTS_PER_SNEAKER_SALE = 100
 
-# Points earned per NPR 100 spent
-POINTS_PER_100 = 1
+# Points threshold that triggers a discount on the next transaction
+DISCOUNT_THRESHOLD = 500
 
-# Tier thresholds (total spend in NPR)
-TIER_THRESHOLDS = {
-    LoyaltyTier.BRONZE: Decimal("0"),
-    LoyaltyTier.SILVER: Decimal("10000"),
-    LoyaltyTier.GOLD: Decimal("50000"),
-    LoyaltyTier.PLATINUM: Decimal("100000"),
-}
-
-# Tier discount percentages
-TIER_DISCOUNTS = {
-    LoyaltyTier.BRONZE: Decimal("0"),
-    LoyaltyTier.SILVER: Decimal("2"),
-    LoyaltyTier.GOLD: Decimal("5"),
-    LoyaltyTier.PLATINUM: Decimal("8"),
-}
+# Discount percentage applied on the transaction after reaching threshold
+DISCOUNT_PERCENTAGE = Decimal("10")
 
 
 class Customer(BaseModel):
@@ -40,17 +26,7 @@ class Customer(BaseModel):
     email = models.EmailField(_("Email"), blank=True)
     address = models.TextField(_("Address"), blank=True)
 
-    tier = models.CharField(
-        _("Loyalty Tier"),
-        max_length=20,
-        choices=LoyaltyTier.choices,
-        default=LoyaltyTier.BRONZE,
-    )
     total_points = models.PositiveIntegerField(_("Total Points"), default=0)
-    redeemed_points = models.PositiveIntegerField(_("Redeemed Points"), default=0)
-    total_spend = models.DecimalField(
-        _("Total Spend (NPR)"), max_digits=12, decimal_places=2, default=0
-    )
 
     class Meta:
         ordering = ["-created_at"]
@@ -59,53 +35,31 @@ class Customer(BaseModel):
         return f"{self.name} ({self.phone})"
 
     @property
-    def available_points(self):
-        return self.total_points - self.redeemed_points
+    def is_discount_eligible(self):
+        """True when customer has accumulated enough points for a discount."""
+        return self.total_points >= DISCOUNT_THRESHOLD
 
-    @property
-    def tier_discount(self):
-        return TIER_DISCOUNTS.get(self.tier, Decimal("0"))
+    def earn_points(self):
+        """
+        Award flat points for a sneaker purchase.
+        If customer has reached the threshold, apply discount and reset.
+        Returns (points_earned, discount_percent).
+        """
+        discount_percent = Decimal("0")
 
-    def recalculate_tier(self):
-        new_tier = LoyaltyTier.BRONZE
-        for tier, threshold in sorted(
-            TIER_THRESHOLDS.items(), key=lambda x: x[1], reverse=True
-        ):
-            if self.total_spend >= threshold:
-                new_tier = tier
-                break
-        if self.tier != new_tier:
-            self.tier = new_tier
-            self.save(update_fields=["tier"])
-        return new_tier
+        if self.total_points >= DISCOUNT_THRESHOLD:
+            discount_percent = DISCOUNT_PERCENTAGE
+            self.total_points = 0  # reset cycle
 
-    def earn_points(self, amount):
-        """Award points based on purchase amount. Returns points earned."""
-        points = int(amount / 100) * POINTS_PER_100
-        if points > 0:
-            self.total_points += points
-            self.total_spend += amount
-            self.save(update_fields=["total_points", "total_spend"])
-            self.recalculate_tier()
-        return points
-
-    def redeem_points(self, points):
-        """Redeem points. Returns True if successful."""
-        if points > self.available_points:
-            return False
-        self.redeemed_points += points
-        self.save(update_fields=["redeemed_points"])
-        return True
+        self.total_points += POINTS_PER_SNEAKER_SALE
+        self.save(update_fields=["total_points"])
+        return POINTS_PER_SNEAKER_SALE, discount_percent
 
 
 class LoyaltyTransaction(BaseModel):
     EARN = "earn"
-    REDEEM = "redeem"
-    ADJUSTMENT = "adjustment"
     TRANSACTION_TYPES = [
         (EARN, _("Earn")),
-        (REDEEM, _("Redeem")),
-        (ADJUSTMENT, _("Adjustment")),
     ]
 
     customer = models.ForeignKey(
@@ -114,11 +68,18 @@ class LoyaltyTransaction(BaseModel):
         related_name="transactions",
     )
     transaction_type = models.CharField(
-        _("Type"), max_length=20, choices=TRANSACTION_TYPES
+        _("Type"), max_length=20, choices=TRANSACTION_TYPES, default=EARN
     )
     points = models.IntegerField(
         _("Points"),
-        help_text=_("Positive for earn, negative for redeem"),
+        help_text=_("Points earned in this transaction"),
+    )
+    discount_applied = models.DecimalField(
+        _("Discount %"),
+        max_digits=5,
+        decimal_places=2,
+        default=0,
+        help_text=_("Discount percentage applied on this transaction (0 if none)"),
     )
     sale = models.ForeignKey(
         "sales.Sale",

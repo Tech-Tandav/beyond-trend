@@ -4,7 +4,7 @@ from django.db.models import Count, DecimalField, ExpressionWrapper, F, Sum, Val
 from django.db.models.functions import Coalesce, TruncDate
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -66,7 +66,7 @@ class SalesAnalyticsView(APIView):
     GET /api/v1/sales/analytics/
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminUser]
 
     def get(self, request):
         from_date, to_date = _get_date_range(request)

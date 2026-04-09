@@ -4,12 +4,11 @@ from beyond_trend.loyalty.models import Customer, LoyaltyTransaction
 
 
 class CustomerFilter(django_filters.FilterSet):
-    tier = django_filters.CharFilter(field_name="tier")
     phone = django_filters.CharFilter(field_name="phone", lookup_expr="icontains")
 
     class Meta:
         model = Customer
-        fields = ["tier", "phone"]
+        fields = ["phone"]
 
 
 class LoyaltyTransactionFilter(django_filters.FilterSet):

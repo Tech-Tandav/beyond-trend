@@ -73,6 +73,9 @@ class ProductSerializer(BaseModelSerializer):
     selling_price = serializers.DecimalField(
         max_digits=10, decimal_places=2, required=False, allow_null=True
     )
+    cost_price = serializers.DecimalField(
+        max_digits=10, decimal_places=2, required=False, allow_null=True
+    )
     is_low_stock = serializers.BooleanField(read_only=True)
     is_out_of_stock = serializers.BooleanField(read_only=True)
     images = ProductImageSerializer(many=True, read_only=True)
@@ -100,6 +103,7 @@ class ProductSerializer(BaseModelSerializer):
             "size",
             "color",
             "barcode",
+            "cost_price",
             "selling_price",
             "quantity",
             "low_stock_threshold",
@@ -107,6 +111,12 @@ class ProductSerializer(BaseModelSerializer):
             "is_out_of_stock",
         ]
         read_only_fields = ["id", "slug", "created_at", "is_low_stock", "is_out_of_stock"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        request = self.context.get("request")
+        if not request or not getattr(request.user, "is_staff", False):
+            self.fields.pop("cost_price", None)
 
     def create(self, validated_data):
         uploaded_images = validated_data.pop("uploaded_images", [])

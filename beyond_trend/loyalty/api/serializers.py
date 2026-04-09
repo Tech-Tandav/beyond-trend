@@ -5,10 +5,7 @@ from beyond_trend.loyalty.models import Customer, LoyaltyTransaction
 
 
 class CustomerSerializer(BaseModelSerializer):
-    available_points = serializers.IntegerField(read_only=True)
-    tier_discount = serializers.DecimalField(
-        max_digits=5, decimal_places=2, read_only=True
-    )
+    is_discount_eligible = serializers.BooleanField(read_only=True)
 
     class Meta(BaseModelSerializer.Meta):
         model = Customer
@@ -18,20 +15,13 @@ class CustomerSerializer(BaseModelSerializer):
             "phone",
             "email",
             "address",
-            "tier",
             "total_points",
-            "redeemed_points",
-            "available_points",
-            "tier_discount",
-            "total_spend",
+            "is_discount_eligible",
             "created_at",
         ]
         read_only_fields = [
             "id",
-            "tier",
             "total_points",
-            "redeemed_points",
-            "total_spend",
             "created_at",
         ]
 
@@ -44,6 +34,7 @@ class LoyaltyTransactionSerializer(BaseModelSerializer):
             "customer",
             "transaction_type",
             "points",
+            "discount_applied",
             "sale",
             "staff",
             "notes",
@@ -55,17 +46,6 @@ class LoyaltyTransactionSerializer(BaseModelSerializer):
 class EarnPointsSerializer(serializers.Serializer):
     customer_id = serializers.UUIDField()
     sale_id = serializers.UUIDField(required=False)
-    amount = serializers.DecimalField(
-        max_digits=12,
-        decimal_places=2,
-        help_text="Purchase amount in NPR to calculate points from.",
-    )
-    notes = serializers.CharField(required=False, allow_blank=True, default="")
-
-
-class RedeemPointsSerializer(serializers.Serializer):
-    customer_id = serializers.UUIDField()
-    points = serializers.IntegerField(min_value=1)
     notes = serializers.CharField(required=False, allow_blank=True, default="")
 
 

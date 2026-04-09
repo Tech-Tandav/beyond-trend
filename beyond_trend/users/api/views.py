@@ -25,6 +25,8 @@ class UserViewSet(RetrieveModelMixin, ListModelMixin, UpdateModelMixin, GenericV
 
     def get_queryset(self, *args, **kwargs):
         assert isinstance(self.request.user.id, int)
+        if self.request.user.is_staff:
+            return self.queryset.all()
         return self.queryset.filter(id=self.request.user.id)
 
     @action(detail=False)

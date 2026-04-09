@@ -4,19 +4,17 @@ from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.views import APIView
 
 from beyond_trend.core.viewsets import BaseModelViewSet
-from beyond_trend.loyalty.models import Customer, LoyaltyTransaction
+from beyond_trend.loyalty.models import Customer, LoyaltyTransaction, LOYALTY_ELIGIBLE_SUBCATEGORY_SLUG
 from beyond_trend.loyalty.api.filters import CustomerFilter, LoyaltyTransactionFilter
 from beyond_trend.loyalty.api.serializers import (
     CustomerLookupSerializer,
     CustomerSerializer,
     EarnPointsSerializer,
     LoyaltyTransactionSerializer,
-    RedeemPointsSerializer,
 )
-from beyond_trend.sales.models import Sale
+from beyond_trend.sales.models import Sale, SaleItem
 
 
 @extend_schema_view(
@@ -25,7 +23,6 @@ from beyond_trend.sales.models import Sale
         summary="List customers",
         description="Returns a paginated list of loyalty customers.",
         parameters=[
-            OpenApiParameter("tier", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by tier (bronze, silver, gold, platinum)."),
             OpenApiParameter("phone", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Search by phone number (partial match)."),
             OpenApiParameter("search", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Search by name, phone, or email."),
         ],
@@ -41,7 +38,7 @@ class CustomerViewSet(BaseModelViewSet):
     permission_classes = [IsAuthenticated]
     filterset_class = CustomerFilter
     search_fields = ["name", "phone", "email"]
-    ordering_fields = ["created_at", "total_spend", "total_points", "tier"]
+    ordering_fields = ["created_at", "total_points"]
 
     @extend_schema(
         tags=["Loyalty"],
@@ -68,7 +65,11 @@ class CustomerViewSet(BaseModelViewSet):
     @extend_schema(
         tags=["Loyalty"],
         summary="Earn loyalty points",
-        description="Award points to a customer based on purchase amount. 1 point per NPR 100 spent.",
+        description=(
+            "Award 100 points for a sneaker purchase. Only sneaker category items "
+            "are eligible. When customer reaches 500 points, a 10%% discount is "
+            "applied on the current transaction and points reset."
+        ),
         request=EarnPointsSerializer,
         responses={200: LoyaltyTransactionSerializer},
     )
@@ -96,60 +97,25 @@ class CustomerViewSet(BaseModelViewSet):
                     status=status.HTTP_404_NOT_FOUND,
                 )
 
-        points = customer.earn_points(data["amount"])
+            # Validate sale contains at least one sneaker item
+            has_sneakers = SaleItem.objects.filter(
+                sale=sale,
+                product__subcategory__slug=LOYALTY_ELIGIBLE_SUBCATEGORY_SLUG,
+            ).exists()
+            if not has_sneakers:
+                return Response(
+                    {"detail": "No sneaker items in this sale. Points not awarded."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        points_earned, discount_percent = customer.earn_points()
 
         transaction = LoyaltyTransaction.objects.create(
             customer=customer,
             transaction_type=LoyaltyTransaction.EARN,
-            points=points,
+            points=points_earned,
+            discount_applied=discount_percent,
             sale=sale,
-            staff=request.user,
-            notes=data.get("notes", ""),
-        )
-
-        return Response(
-            LoyaltyTransactionSerializer(
-                transaction, context=self.get_serializer_context()
-            ).data,
-            status=status.HTTP_200_OK,
-        )
-
-    @extend_schema(
-        tags=["Loyalty"],
-        summary="Redeem loyalty points",
-        description="Redeem points from a customer's balance. 1 point = NPR 1 discount.",
-        request=RedeemPointsSerializer,
-        responses={
-            200: LoyaltyTransactionSerializer,
-            400: OpenApiResponse(description="Insufficient points."),
-        },
-    )
-    @action(detail=False, methods=["post"], url_path="redeem")
-    def redeem_points(self, request):
-        serializer = RedeemPointsSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        data = serializer.validated_data
-
-        try:
-            customer = Customer.objects.get(id=data["customer_id"])
-        except Customer.DoesNotExist:
-            return Response(
-                {"detail": "Customer not found."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-
-        if not customer.redeem_points(data["points"]):
-            return Response(
-                {
-                    "detail": f"Insufficient points. Available: {customer.available_points}"
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        transaction = LoyaltyTransaction.objects.create(
-            customer=customer,
-            transaction_type=LoyaltyTransaction.REDEEM,
-            points=-data["points"],
             staff=request.user,
             notes=data.get("notes", ""),
         )
@@ -169,7 +135,7 @@ class CustomerViewSet(BaseModelViewSet):
         description="Returns a paginated list of all loyalty point transactions.",
         parameters=[
             OpenApiParameter("customer", OpenApiTypes.UUID, OpenApiParameter.QUERY, description="Filter by customer UUID."),
-            OpenApiParameter("transaction_type", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by type (earn, redeem, adjustment)."),
+            OpenApiParameter("transaction_type", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by type (earn)."),
             OpenApiParameter("date_from", OpenApiTypes.DATE, OpenApiParameter.QUERY),
             OpenApiParameter("date_to", OpenApiTypes.DATE, OpenApiParameter.QUERY),
         ],

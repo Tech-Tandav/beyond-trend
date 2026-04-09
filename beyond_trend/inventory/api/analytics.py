@@ -10,7 +10,7 @@ from django.db.models import (
 )
 from django.db.models.functions import Coalesce
 from drf_spectacular.utils import OpenApiResponse, extend_schema
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -40,7 +40,7 @@ class InventoryAnalyticsView(APIView):
     are evaluated per-product.
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminUser]
 
     def get(self, request):
         qty = Coalesce(F("quantity"), Value(0), output_field=IntegerField())
