@@ -364,10 +364,12 @@ class PublicInventoryView(APIView):
                 "pk",
                 "slug",
                 "model",
+                "updated_at",
                 "primary_image",
                 brand_name=Coalesce("brand__name", Value("")),
                 category_name=Coalesce("category__name", Value("")),
                 subcategory_name=Coalesce("subcategory__name", Value("")),
+                vendor_name=Coalesce("vendor__name", Value("")),
             )
             .annotate(
                 colors=ArrayAgg("color", distinct=True, ordering="color"),
@@ -410,11 +412,13 @@ class PublicInventoryView(APIView):
                 "brand_name": row["brand_name"],
                 "category_name": row["category_name"],
                 "subcategory_name": row["subcategory_name"],
+                "vendor_name": row["vendor_name"],
                 "model": row["model"],
                 "color": row["colors"],
                 "size": row["sizes"],
                 "barcode": row["barcodes"],
                 "quantity": row["total_quantity"],
+                "updated_at": row["updated_at"],
                 "image": build_image_url(row.get("primary_image")),
                 "images": images_by_product.get(row["pk"], []),
             }

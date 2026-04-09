@@ -2,7 +2,6 @@ from django.db import transaction
 from rest_framework.exceptions import NotFound, ValidationError
 
 from beyond_trend.core.usecases import BaseUseCase
-from beyond_trend.loyalty.models import Customer
 from beyond_trend.inventory.models import InventoryLog, Product
 
 from beyond_trend.orders.models import Order, OrderItem, PreOrder
@@ -24,18 +23,10 @@ class CreateOrderUseCase(BaseUseCase):
     def __init__(self, data, staff=None):
         self._data = data
         self._staff = staff
-        self._loyalty_customer = None
         self._items_to_create = []  # list of (product, quantity, price)
         self._total_amount = 0
 
     def is_valid(self):
-        loyalty_customer_id = self._data.get("loyalty_customer_id")
-        if loyalty_customer_id:
-            try:
-                self._loyalty_customer = Customer.objects.get(id=loyalty_customer_id)
-            except Customer.DoesNotExist:
-                raise NotFound("Loyalty customer not found.")
-
         for item in self._data["items"]:
             product_id = item["product_id"]
             quantity = item["quantity"]
@@ -70,14 +61,6 @@ class CreateOrderUseCase(BaseUseCase):
             locked.save(update_fields=["quantity"])
 
         phone = self._data.get("phone", "")
-        if self._loyalty_customer is None and phone:
-            self._loyalty_customer, _ = Customer.objects.get_or_create(
-                phone=phone,
-                defaults={
-                    "name": self._data["customer_name"],
-                    "email": self._data["email"],
-                },
-            )
 
         order = Order.objects.create(
             customer_name=self._data["customer_name"],
@@ -85,7 +68,6 @@ class CreateOrderUseCase(BaseUseCase):
             phone=phone,
             notes=self._data.get("notes", ""),
             total_amount=self._total_amount,
-            loyalty_customer=self._loyalty_customer,
         )
 
         for product, quantity, price in self._items_to_create:

@@ -36,7 +36,6 @@ class OrderAdmin(ExcelExportMixin, BaseModelAdmin):
         ("Status", "get_status_display"),
         ("Total Amount", "total_amount"),
         ("Notes", "notes"),
-        ("Loyalty Customer", "loyalty_customer"),
         ("Created At", "created_at"),
     ]
     excel_sheet_name = "Orders"

@@ -37,7 +37,6 @@ urlpatterns += [
     # API base url
     path("api/v1/", include("config.api_router")),
     path("api/v1/inventory/", include("beyond_trend.inventory.urls")),
-    path("api/v1/loyalty/", include("beyond_trend.loyalty.urls")),
     path("api/v1/orders/", include("beyond_trend.orders.urls")),
     path("api/v1/sales/", include("beyond_trend.sales.urls")),
     # DRF auth token

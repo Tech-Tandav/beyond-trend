@@ -12,20 +12,11 @@ class Sale(BaseModel):
         null=True,
         related_name="sales",
     )
-    customer = models.ForeignKey(
-        "loyalty.Customer",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="sales",
-    )
     subtotal = models.DecimalField(_("Subtotal"), max_digits=12, decimal_places=2)
     discount_amount = models.DecimalField(
         _("Discount Amount"), max_digits=12, decimal_places=2, default=0
     )
     total_amount = models.DecimalField(_("Total Amount"), max_digits=12, decimal_places=2)
-    loyalty_points_used = models.PositiveIntegerField(_("Loyalty Points Used"), default=0)
-    loyalty_points_earned = models.PositiveIntegerField(_("Loyalty Points Earned"), default=0)
     notes = models.TextField(_("Notes"), blank=True)
 
     class Meta:

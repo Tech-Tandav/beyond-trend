@@ -47,7 +47,6 @@ from beyond_trend.orders.api.usecases import (
             description="Filter by order status.",
             enum=[choice[0] for choice in Order.STATUS_CHOICES],
         ),
-        OpenApiParameter("loyalty_customer", OpenApiTypes.UUID, OpenApiParameter.QUERY, description="Filter by loyalty customer UUID."),
         OpenApiParameter("date_from", OpenApiTypes.DATE, OpenApiParameter.QUERY, description="Filter orders on or after this date (YYYY-MM-DD)."),
         OpenApiParameter("date_to", OpenApiTypes.DATE, OpenApiParameter.QUERY, description="Filter orders on or before this date (YYYY-MM-DD)."),
         OpenApiParameter("search", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Search across customer_name, email, phone."),
@@ -81,8 +80,7 @@ class OrderRetrieveAPIView(generics.RetrieveAPIView):
     summary="Create an order",
     description=(
         "Public endpoint used by the storefront checkout. Creates a new order with the "
-        "supplied items, computes `total_amount` from current product prices, and (if "
-        "`loyalty_customer_id` is supplied) links the order to a loyalty customer.\n\n"
+        "supplied items and computes `total_amount` from current product prices.\n\n"
         "Returns the full order including line items."
     ),
     request=CreateOrderSerializer,
@@ -218,7 +216,6 @@ class PreOrderViewSet(BaseModelViewSet):
     ),
     parameters=[
         OpenApiParameter("status", OpenApiTypes.STR, OpenApiParameter.QUERY, enum=[c[0] for c in Order.STATUS_CHOICES]),
-        OpenApiParameter("loyalty_customer", OpenApiTypes.UUID, OpenApiParameter.QUERY),
         OpenApiParameter("date_from", OpenApiTypes.DATE, OpenApiParameter.QUERY),
         OpenApiParameter("date_to", OpenApiTypes.DATE, OpenApiParameter.QUERY),
     ],
@@ -240,7 +237,6 @@ class OrderExcelExportAPIView(ExcelExportAPIView):
         ("Status", "get_status_display"),
         ("Total Amount", "total_amount"),
         ("Notes", "notes"),
-        ("Loyalty Customer", "loyalty_customer"),
         ("Created At", "created_at"),
     ]
 

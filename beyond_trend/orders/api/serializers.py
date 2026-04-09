@@ -29,7 +29,6 @@ class OrderSerializer(BaseModelSerializer):
             "status",
             "total_amount",
             "notes",
-            "loyalty_customer",
             "items",
             "is_archived",
             "created_at",
@@ -51,7 +50,6 @@ class CreateOrderSerializer(serializers.Serializer):
     phone = serializers.CharField(max_length=20, required=False, allow_blank=True, default="")
     items = CreateOrderItemSerializer(many=True)
     notes = serializers.CharField(required=False, allow_blank=True, default="")
-    loyalty_customer_id = serializers.UUIDField(required=False, allow_null=True)
 
     def validate_items(self, value):
         if not value:

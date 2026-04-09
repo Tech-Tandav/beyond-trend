@@ -26,14 +26,14 @@ from beyond_trend.sales.api.usecases import CheckoutUseCase
         summary="List sales",
         description=(
             "Returns a paginated list of POS sales (read-only).\n\n"
-            "Supports filtering via `SaleFilter`, `?search=` on customer / staff name, "
+            "Supports filtering via `SaleFilter`, `?search=` on staff name, "
             "and `?ordering=` on `created_at`, `total_amount`, `subtotal`."
         ),
         parameters=[
             OpenApiParameter("staff", OpenApiTypes.UUID, OpenApiParameter.QUERY, description="Filter by staff user UUID."),
             OpenApiParameter("date_from", OpenApiTypes.DATE, OpenApiParameter.QUERY, description="Filter sales on or after this date (YYYY-MM-DD)."),
             OpenApiParameter("date_to", OpenApiTypes.DATE, OpenApiParameter.QUERY, description="Filter sales on or before this date (YYYY-MM-DD)."),
-            OpenApiParameter("search", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Search across customer name, customer email, staff name."),
+            OpenApiParameter("search", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Search across staff name."),
             OpenApiParameter("ordering", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Order by: created_at, total_amount, subtotal (prefix `-` for descending)."),
         ],
     ),
@@ -45,7 +45,7 @@ from beyond_trend.sales.api.usecases import CheckoutUseCase
     create=extend_schema(
         tags=["Sales"],
         summary="Create a sale (raw)",
-        description="Direct sale creation. Most clients should use the `/sales/checkout/` action instead, which validates stock and applies loyalty.",
+        description="Direct sale creation. Most clients should use the `/sales/checkout/` action instead, which validates stock.",
     ),
 )
 class SaleViewSet(BaseModelViewSet):
@@ -54,7 +54,7 @@ class SaleViewSet(BaseModelViewSet):
     permission_classes = [IsAuthenticated]
     http_method_names = ["get", "head", "options", "post"]
     filterset_class = SaleFilter
-    search_fields = ["customer__name", "customer__email", "staff__name"]
+    search_fields = ["staff__name"]
     ordering_fields = ["created_at", "total_amount", "subtotal"]
 
     @extend_schema(
@@ -64,21 +64,18 @@ class SaleViewSet(BaseModelViewSet):
             "Full point-of-sale checkout. In a single transaction this endpoint:\n\n"
             "1. Validates stock for every line item.\n"
             "2. Creates a `Sale` and the related `SaleItem` rows.\n"
-            "3. Decrements stock and writes `InventoryLog` check-out entries.\n"
-            "4. If `customer_id` is provided, **awards** loyalty points based on the "
-            "subtotal and the current `LoyaltySettings`.\n"
-            "5. If `loyalty_points_used > 0`, **redeems** points against the total.\n\n"
+            "3. Decrements stock and writes `InventoryLog` check-out entries.\n\n"
             "Returns the full sale on success. Returns `400` if any line item has "
-            "insufficient stock or if the customer cannot redeem the requested points."
+            "insufficient stock."
         ),
         request=CheckoutSerializer,
         responses={
             201: SaleSerializer,
-            400: OpenApiResponse(description="Validation error: insufficient stock or invalid loyalty redemption."),
+            400: OpenApiResponse(description="Validation error: insufficient stock."),
         },
         examples=[
             OpenApiExample(
-                "Walk-in checkout (no loyalty)",
+                "Walk-in checkout",
                 value={
                     "items": [
                         {
@@ -88,22 +85,6 @@ class SaleViewSet(BaseModelViewSet):
                         }
                     ],
                     "notes": "",
-                },
-                request_only=True,
-            ),
-            OpenApiExample(
-                "Loyalty customer checkout",
-                value={
-                    "items": [
-                        {
-                            "variant_id": "0d3b3ce6-1b9f-4f1d-8f5d-6f1a2c2d3e4f",
-                            "quantity": 2,
-                            "selling_price": "4500.00",
-                        }
-                    ],
-                    "customer_id": "11111111-2222-3333-4444-555555555555",
-                    "loyalty_points_used": 50,
-                    "phone_number": "+9779812345678",
                 },
                 request_only=True,
             ),
@@ -117,7 +98,6 @@ class SaleViewSet(BaseModelViewSet):
         - Creates Sale + SaleItems
         - Reduces stock
         - Logs inventory check-out
-        - Awards / deducts loyalty points if customer selected
         """
         serializer = CheckoutSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -140,14 +120,13 @@ class SaleViewSet(BaseModelViewSet):
     ),
     parameters=[
         OpenApiParameter("staff", OpenApiTypes.UUID, OpenApiParameter.QUERY),
-        OpenApiParameter("customer", OpenApiTypes.UUID, OpenApiParameter.QUERY),
         OpenApiParameter("date_from", OpenApiTypes.DATE, OpenApiParameter.QUERY),
         OpenApiParameter("date_to", OpenApiTypes.DATE, OpenApiParameter.QUERY),
     ],
     responses={(200, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"): OpenApiTypes.BINARY},
 )
 class SaleExcelExportAPIView(ExcelExportAPIView):
-    queryset = Sale.objects.select_related("staff", "customer").prefetch_related(
+    queryset = Sale.objects.select_related("staff").prefetch_related(
         "items__product"
     )
     permission_classes = [IsAuthenticated]
@@ -159,12 +138,9 @@ class SaleExcelExportAPIView(ExcelExportAPIView):
     excel_export_fields = [
         ("Sale ID", "id"),
         ("Staff", "staff"),
-        ("Customer", "customer"),
         ("Subtotal", "subtotal"),
         ("Discount", "discount_amount"),
         ("Total", "total_amount"),
-        ("Loyalty Points Used", "loyalty_points_used"),
-        ("Loyalty Points Earned", "loyalty_points_earned"),
         ("Notes", "notes"),
         ("Created At", "created_at"),
     ]

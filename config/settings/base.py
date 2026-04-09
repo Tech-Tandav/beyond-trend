@@ -92,7 +92,6 @@ LOCAL_APPS = [
     "beyond_trend.users",
     # Your stuff: custom apps go here
     "beyond_trend.inventory",
-    "beyond_trend.loyalty",
     "beyond_trend.orders",
     "beyond_trend.sales",
 ]
@@ -384,7 +383,7 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": (
         "REST API for the Beyond Trend shoe shop platform.\n\n"
         "This API powers inventory management, point-of-sale checkout, "
-        "online orders & pre-orders, and the customer loyalty program.\n\n"
+        "and online orders & pre-orders.\n\n"
         "## Authentication\n"
         "Most endpoints require a token. Obtain one by `POST /api/auth-token/` "
         "with `username` + `password`, then send `Authorization: Token <key>` "
@@ -416,9 +415,6 @@ SPECTACULAR_SETTINGS = {
         {"name": "Pre-Orders", "description": "Customer pre-orders for unavailable items."},
         {"name": "Sales", "description": "POS sales and checkout."},
         {"name": "Sales - Analytics", "description": "Sales dashboards and KPIs."},
-        {"name": "Loyalty - Customers", "description": "Loyalty program customers."},
-        {"name": "Loyalty - Transactions", "description": "Loyalty point ledger."},
-        {"name": "Loyalty - Settings", "description": "Loyalty program configuration."},
     ],
     "SWAGGER_UI_SETTINGS": {
         "deepLinking": True,

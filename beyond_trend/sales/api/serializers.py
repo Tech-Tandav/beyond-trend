@@ -22,12 +22,9 @@ class SaleSerializer(BaseModelSerializer):
         fields = [
             "id",
             "staff",
-            "customer",
             "subtotal",
             "discount_amount",
             "total_amount",
-            "loyalty_points_used",
-            "loyalty_points_earned",
             "notes",
             "items",
             "created_at",
@@ -37,7 +34,6 @@ class SaleSerializer(BaseModelSerializer):
             "staff",
             "subtotal",
             "total_amount",
-            "loyalty_points_earned",
             "created_at",
         ]
 
@@ -49,7 +45,7 @@ class CheckoutItemSerializer(serializers.Serializer):
 
 
 class CheckoutSerializer(serializers.Serializer):
-    """Full POS checkout — creates a Sale with items, reduces stock, awards loyalty points.
+    """Full POS checkout — creates a Sale with items and reduces stock.
 
     When `order_id` is provided, `items` is treated as per-product selling-price
     overrides (quantity is taken from the order). For direct checkouts, `items`
@@ -57,9 +53,6 @@ class CheckoutSerializer(serializers.Serializer):
     """
     items = CheckoutItemSerializer(many=True, required=False)
     order_id = serializers.UUIDField(required=False, allow_null=True)
-    phone_number = serializers.CharField(max_length=20, required=False, allow_blank=True)
-    loyalty_points_used = serializers.IntegerField(min_value=0, default=0)
-    redeem = serializers.BooleanField(default=False)
     notes = serializers.CharField(required=False, allow_blank=True, default="")
 
     def validate(self, attrs):

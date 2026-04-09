@@ -30,13 +30,6 @@ class Order(BaseModel):
         _("Total Amount"), max_digits=12, decimal_places=2, default=0
     )
     notes = models.TextField(_("Notes"), blank=True)
-    loyalty_customer = models.ForeignKey(
-        "loyalty.Customer",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="orders",
-    )
 
     class Meta:
         ordering = ["-created_at"]
