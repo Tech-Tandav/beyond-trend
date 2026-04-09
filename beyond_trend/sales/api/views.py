@@ -8,7 +8,7 @@ from drf_spectacular.utils import (
 )
 from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from beyond_trend.core.excel import ExcelExportAPIView
@@ -90,7 +90,7 @@ class SaleViewSet(BaseModelViewSet):
             ),
         ],
     )
-    @action(detail=False, methods=["post"], url_path="checkout")
+    @action(detail=False, methods=["post"], url_path="checkout", permission_classes=[AllowAny])
     def checkout(self, request):
         """
         POS Checkout:
