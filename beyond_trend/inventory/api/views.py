@@ -279,6 +279,7 @@ class PublicInventoryItemSerializer(serializers.Serializer):
     barcode = serializers.ListField(child=serializers.CharField())
     quantity = serializers.IntegerField()
     image = serializers.CharField(allow_null=True)
+    images = serializers.ListField(child=serializers.CharField())
 
 
 @extend_schema(
@@ -314,7 +315,7 @@ class PublicInventoryView(APIView):
         rows = (
             Product.objects.filter(is_published=True)
             .annotate(primary_image=Subquery(primary_image))
-            .values("slug", "model", "primary_image", brand_name=Coalesce("brand__name", Value("")))
+            .values("pk", "slug", "model", "primary_image", brand_name=Coalesce("brand__name", Value("")))
             .annotate(
                 colors=ArrayAgg("color", distinct=True, ordering="color"),
                 sizes=ArrayAgg("size", distinct=True, ordering="size"),
@@ -339,6 +340,17 @@ class PublicInventoryView(APIView):
                 media_url += "/"
             return request.build_absolute_uri(f"{media_url}{image_path.lstrip('/')}")
 
+        product_pks = [row["pk"] for row in page]
+        images_by_product: dict[int, list[str]] = {}
+        for img in (
+            ProductImage.objects.filter(product_id__in=product_pks)
+            .order_by("product_id", "-is_primary", "order", "created_at")
+            .values("product_id", "image")
+        ):
+            url = build_image_url(img["image"])
+            if url:
+                images_by_product.setdefault(img["product_id"], []).append(url)
+
         result = [
             {
                 "slug": row["slug"],
@@ -349,6 +361,7 @@ class PublicInventoryView(APIView):
                 "barcode": row["barcodes"],
                 "quantity": row["total_quantity"],
                 "image": build_image_url(row.get("primary_image")),
+                "images": images_by_product.get(row["pk"], []),
             }
             for row in page
         ]
