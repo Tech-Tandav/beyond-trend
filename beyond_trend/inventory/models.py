@@ -98,6 +98,7 @@ class Product(BaseModelWithSlug):
     size = models.CharField(_("Size"), max_length=20)
     color = models.CharField(_("Color"), max_length=50)
     barcode = models.CharField(_("Barcode"), max_length=100, unique=True, blank=True)
+    cost_price = models.DecimalField(_("Cost Price"), max_digits=10, decimal_places=2, null=True, blank=True)
     selling_price = models.DecimalField(_("Selling Price"), max_digits=10, decimal_places=2, null=True, blank=True)
     quantity = models.PositiveIntegerField(_("Quantity"), default=0)
     low_stock_threshold = models.PositiveIntegerField(_("Low Stock Threshold"), default=5)
