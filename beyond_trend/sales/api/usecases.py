@@ -38,6 +38,7 @@ class CheckoutUseCase(BaseUseCase):
             price_overrides = {
                 str(i["product_id"]): i["selling_price"]
                 for i in (self._data.get("items") or [])
+                if "selling_price" in i
             }
 
             # Stock was already decremented when the order was created — don't re-check.
@@ -67,7 +68,7 @@ class CheckoutUseCase(BaseUseCase):
                 self._items.append({
                     "product": product,
                     "quantity": item["quantity"],
-                    "selling_price": item["selling_price"],
+                    "selling_price": item.get("selling_price", product.selling_price),
                 })
 
         self._subtotal = sum(
