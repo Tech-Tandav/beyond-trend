@@ -1,9 +1,56 @@
+import io
 import os
 
+from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from PIL import Image, ImageDraw, ImageFont
 
 from beyond_trend.inventory.models import Brand, Category, Product, ProductImage, SubCategory, Vendor
+
+
+# ── Colour name → RGB mapping for placeholder images ────────────
+_COLOR_MAP = {
+    "black": (30, 30, 30),
+    "white": (240, 240, 240),
+    "grey": (160, 160, 160),
+    "navy": (30, 40, 80),
+    "blue": (50, 100, 200),
+    "red": (200, 50, 50),
+    "green": (50, 150, 70),
+    "olive": (107, 142, 35),
+    "beige": (210, 190, 160),
+    "cream": (255, 253, 230),
+    "indigo": (60, 50, 120),
+    "brown": (120, 80, 50),
+}
+
+
+def _generate_placeholder(brand: str, model: str, color: str, label: str) -> ContentFile:
+    """Create a 400×400 placeholder image with the product colour as background."""
+    bg = _COLOR_MAP.get(color.lower(), (180, 180, 180))
+    # pick contrasting text colour
+    luminance = 0.299 * bg[0] + 0.587 * bg[1] + 0.114 * bg[2]
+    fg = (255, 255, 255) if luminance < 140 else (0, 0, 0)
+
+    img = Image.new("RGB", (400, 400), bg)
+    draw = ImageDraw.Draw(img)
+
+    try:
+        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 20)
+        font_sm = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 16)
+    except OSError:
+        font = ImageFont.load_default()
+        font_sm = font
+
+    draw.text((200, 160), brand, fill=fg, anchor="mm", font=font)
+    draw.text((200, 195), model, fill=fg, anchor="mm", font=font_sm)
+    draw.text((200, 230), label, fill=fg, anchor="mm", font=font_sm)
+
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", quality=80)
+    filename = f"{brand}_{model}_{label}.jpg".lower().replace(" ", "_").replace("'", "")
+    return ContentFile(buf.getvalue(), name=filename)
 
 
 def _is_truthy(value: str | None) -> bool:
@@ -213,121 +260,13 @@ class Command(BaseCommand):
             )
             products.append(product)
 
-        # ── Product Images ───────────────────────────────────────
-        # Maps (brand, model) → list of image paths for apparel products.
-        apparel_images = {
-            # T-Shirts
-            ("Nike", "Dri-FIT Training Tee"): [
-                "products/nike_drifit_training_tee_white_front.jpg",
-                "products/nike_drifit_training_tee_white_back.jpg",
-            ],
-            ("Nike", "Sportswear Essential Crop Top"): [
-                "products/nike_essential_crop_top_black_front.jpg",
-                "products/nike_essential_crop_top_black_back.jpg",
-            ],
-            ("Adidas", "Essentials 3-Stripes Tee"): [
-                "products/adidas_3stripes_tee_black_front.jpg",
-                "products/adidas_3stripes_tee_black_back.jpg",
-            ],
-            ("Adidas", "Originals Trefoil Tee"): [
-                "products/adidas_trefoil_tee_white_front.jpg",
-            ],
-            ("Uniqlo", "Supima Cotton Crew Neck"): [
-                "products/uniqlo_supima_crew_navy_front.jpg",
-            ],
-            ("H&M", "Oversized Graphic Print Tee"): [
-                "products/hm_oversized_graphic_tee_grey_front.jpg",
-                "products/hm_oversized_graphic_tee_grey_detail.jpg",
-            ],
-            ("Zara", "Relaxed Fit V-Neck Tee"): [
-                "products/zara_vneck_tee_olive_front.jpg",
-            ],
-            # Jackets
-            ("The North Face", "Thermoball Eco Jacket"): [
-                "products/tnf_thermoball_eco_black_front.jpg",
-                "products/tnf_thermoball_eco_black_back.jpg",
-            ],
-            ("The North Face", "Nuptse Puffer Jacket"): [
-                "products/tnf_nuptse_puffer_red_front.jpg",
-                "products/tnf_nuptse_puffer_red_side.jpg",
-            ],
-            ("Nike", "Windrunner Jacket"): [
-                "products/nike_windrunner_blue_front.jpg",
-                "products/nike_windrunner_blue_back.jpg",
-            ],
-            ("Adidas", "Essentials Down Jacket"): [
-                "products/adidas_down_jacket_green_front.jpg",
-            ],
-            ("Zara", "Faux Leather Biker Jacket"): [
-                "products/zara_biker_jacket_black_front.jpg",
-                "products/zara_biker_jacket_black_detail.jpg",
-            ],
-            ("H&M", "Denim Trucker Jacket"): [
-                "products/hm_denim_trucker_blue_front.jpg",
-            ],
-            ("Levi's", "Sherpa Trucker Jacket"): [
-                "products/levis_sherpa_trucker_indigo_front.jpg",
-                "products/levis_sherpa_trucker_indigo_back.jpg",
-            ],
-            # Pants
-            ("Levi's", "501 Original Fit Jeans"): [
-                "products/levis_501_indigo_front.jpg",
-                "products/levis_501_indigo_back.jpg",
-            ],
-            ("Levi's", "511 Slim Fit Jeans"): [
-                "products/levis_511_black_front.jpg",
-            ],
-            ("Nike", "Tech Fleece Joggers"): [
-                "products/nike_tech_fleece_joggers_grey_front.jpg",
-                "products/nike_tech_fleece_joggers_grey_side.jpg",
-            ],
-            ("Adidas", "Tiro 23 Track Pants"): [
-                "products/adidas_tiro23_black_front.jpg",
-            ],
-            ("Uniqlo", "Smart Ankle Pants"): [
-                "products/uniqlo_smart_ankle_beige_front.jpg",
-            ],
-            ("Zara", "Wide Leg Palazzo Pants"): [
-                "products/zara_palazzo_cream_front.jpg",
-                "products/zara_palazzo_cream_side.jpg",
-            ],
-            ("H&M", "Cargo Jogger Pants"): [
-                "products/hm_cargo_jogger_olive_front.jpg",
-            ],
-            # Shorts
-            ("Nike", "Dri-FIT Challenger Shorts"): [
-                "products/nike_challenger_shorts_black_front.jpg",
-            ],
-            ("Adidas", "Aeroready 3-Stripes Shorts"): [
-                "products/adidas_aeroready_shorts_navy_front.jpg",
-            ],
-            ("Puma", "Essentials Sweat Shorts"): [
-                "products/puma_sweat_shorts_grey_front.jpg",
-            ],
-            ("Uniqlo", "Chino Shorts"): [
-                "products/uniqlo_chino_shorts_beige_front.jpg",
-            ],
-            # Dresses
-            ("Zara", "Satin Midi Slip Dress"): [
-                "products/zara_satin_midi_black_front.jpg",
-                "products/zara_satin_midi_black_back.jpg",
-            ],
-            ("H&M", "Floral Wrap Dress"): [
-                "products/hm_floral_wrap_dress_red_front.jpg",
-                "products/hm_floral_wrap_dress_red_detail.jpg",
-            ],
-            ("Zara", "Ribbed Knit Bodycon Dress"): [
-                "products/zara_bodycon_dress_cream_front.jpg",
-            ],
-        }
-
+        # ── Product Images (generated placeholders) ────────────
         for product in products:
-            key = (product.brand.name, product.model)
-            image_paths = apparel_images.get(key, [])
-            for order, path in enumerate(image_paths):
-                ProductImage.objects.create(
-                    product=product,
-                    image=path,
-                    is_primary=(order == 0),
-                    order=order,
-                )
+            brand_name = product.brand.name
+            front = _generate_placeholder(brand_name, product.model, product.color, "front")
+            img = ProductImage(product=product, is_primary=True, order=0)
+            img.image.save(front.name, front, save=True)
+
+            back = _generate_placeholder(brand_name, product.model, product.color, "back")
+            img2 = ProductImage(product=product, is_primary=False, order=1)
+            img2.image.save(back.name, back, save=True)
