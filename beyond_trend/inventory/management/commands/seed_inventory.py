@@ -3,7 +3,7 @@ import os
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
-from beyond_trend.inventory.models import Brand, Category, Product, SubCategory, Vendor
+from beyond_trend.inventory.models import Brand, Category, Product, ProductImage, SubCategory, Vendor
 
 
 def _is_truthy(value: str | None) -> bool:
@@ -147,23 +147,38 @@ class Command(BaseCommand):
             ("Adidas", "Adilette Comfort", "Black", "41", 20, "2800.00", "1800.00", "Footwear", "Sandals"),
             ("Nike", "Victori One Slide", "White", "42", 18, "2500.00", "1600.00", "Footwear", "Sandals"),
             # --- Apparels: T-Shirts ---
-            ("Nike", "Sportswear Club Tee", "White", "M", 25, "2500.00", "1500.00", "Apparels", "T-Shirts"),
+            ("Nike", "Dri-FIT Training Tee", "White", "M", 25, "2500.00", "1500.00", "Apparels", "T-Shirts"),
+            ("Nike", "Sportswear Essential Crop Top", "Black", "S", 18, "2800.00", "1600.00", "Apparels", "T-Shirts"),
             ("Adidas", "Essentials 3-Stripes Tee", "Black", "L", 20, "2200.00", "1300.00", "Apparels", "T-Shirts"),
+            ("Adidas", "Originals Trefoil Tee", "White", "M", 22, "2400.00", "1400.00", "Apparels", "T-Shirts"),
             ("Uniqlo", "Supima Cotton Crew Neck", "Navy", "M", 30, "1500.00", "800.00", "Apparels", "T-Shirts"),
-            ("H&M", "Regular Fit Crew-Neck", "Grey", "S", 35, "900.00", "450.00", "Apparels", "T-Shirts"),
+            ("H&M", "Oversized Graphic Print Tee", "Grey", "S", 35, "900.00", "450.00", "Apparels", "T-Shirts"),
+            ("Zara", "Relaxed Fit V-Neck Tee", "Olive", "L", 28, "1200.00", "600.00", "Apparels", "T-Shirts"),
             # --- Apparels: Jackets ---
             ("The North Face", "Thermoball Eco Jacket", "Black", "L", 5, "18000.00", "12500.00", "Apparels", "Jackets"),
+            ("The North Face", "Nuptse Puffer Jacket", "Red", "M", 4, "22000.00", "15000.00", "Apparels", "Jackets"),
             ("Nike", "Windrunner Jacket", "Blue", "M", 8, "8500.00", "5800.00", "Apparels", "Jackets"),
             ("Adidas", "Essentials Down Jacket", "Green", "XL", 3, "12000.00", "8500.00", "Apparels", "Jackets"),
             ("Zara", "Faux Leather Biker Jacket", "Black", "M", 6, "7500.00", "4200.00", "Apparels", "Jackets"),
+            ("H&M", "Denim Trucker Jacket", "Blue", "L", 10, "4500.00", "2500.00", "Apparels", "Jackets"),
+            ("Levi's", "Sherpa Trucker Jacket", "Indigo", "M", 7, "9500.00", "6500.00", "Apparels", "Jackets"),
             # --- Apparels: Pants ---
             ("Levi's", "501 Original Fit Jeans", "Indigo", "32", 15, "6500.00", "4000.00", "Apparels", "Pants"),
+            ("Levi's", "511 Slim Fit Jeans", "Black", "30", 12, "6000.00", "3800.00", "Apparels", "Pants"),
             ("Nike", "Tech Fleece Joggers", "Grey", "M", 12, "7200.00", "4800.00", "Apparels", "Pants"),
             ("Adidas", "Tiro 23 Track Pants", "Black", "L", 18, "4500.00", "2800.00", "Apparels", "Pants"),
             ("Uniqlo", "Smart Ankle Pants", "Beige", "30", 22, "3200.00", "1800.00", "Apparels", "Pants"),
+            ("Zara", "Wide Leg Palazzo Pants", "Cream", "28", 14, "3800.00", "2200.00", "Apparels", "Pants"),
+            ("H&M", "Cargo Jogger Pants", "Olive", "M", 16, "2800.00", "1500.00", "Apparels", "Pants"),
             # --- Apparels: Shorts ---
             ("Nike", "Dri-FIT Challenger Shorts", "Black", "M", 14, "3200.00", "2000.00", "Apparels", "Shorts"),
             ("Adidas", "Aeroready 3-Stripes Shorts", "Navy", "L", 10, "2800.00", "1700.00", "Apparels", "Shorts"),
+            ("Puma", "Essentials Sweat Shorts", "Grey", "M", 12, "2400.00", "1400.00", "Apparels", "Shorts"),
+            ("Uniqlo", "Chino Shorts", "Beige", "32", 20, "1800.00", "900.00", "Apparels", "Shorts"),
+            # --- Apparels: Dresses ---
+            ("Zara", "Satin Midi Slip Dress", "Black", "S", 8, "5500.00", "3200.00", "Apparels", "Dresses"),
+            ("H&M", "Floral Wrap Dress", "Red", "M", 10, "3200.00", "1800.00", "Apparels", "Dresses"),
+            ("Zara", "Ribbed Knit Bodycon Dress", "Cream", "S", 6, "4200.00", "2500.00", "Apparels", "Dresses"),
             # --- Accessories: Bags ---
             ("Nike", "Brasilia Backpack", "Black", "One Size", 10, "4500.00", "2800.00", "Accessories", "Bags"),
             ("The North Face", "Borealis Backpack", "Navy", "One Size", 7, "8500.00", "5800.00", "Accessories", "Bags"),
@@ -176,11 +191,12 @@ class Command(BaseCommand):
             ("Adidas", "Cushioned Athletic Socks", "Black", "L", 40, "700.00", "300.00", "Accessories", "Socks"),
         ]
 
+        products = []
         for idx, (
             brand_name, model, color, size, qty,
             selling_price, cost_price, cat_name, subcat_name,
         ) in enumerate(catalog):
-            Product.objects.create(
+            product = Product.objects.create(
                 brand=brands[brand_name],
                 vendor=vendors[idx % len(vendors)],
                 category=categories[cat_name],
@@ -195,3 +211,123 @@ class Command(BaseCommand):
                 low_stock_threshold=5,
                 is_published=True,
             )
+            products.append(product)
+
+        # ── Product Images ───────────────────────────────────────
+        # Maps (brand, model) → list of image paths for apparel products.
+        apparel_images = {
+            # T-Shirts
+            ("Nike", "Dri-FIT Training Tee"): [
+                "products/nike_drifit_training_tee_white_front.jpg",
+                "products/nike_drifit_training_tee_white_back.jpg",
+            ],
+            ("Nike", "Sportswear Essential Crop Top"): [
+                "products/nike_essential_crop_top_black_front.jpg",
+                "products/nike_essential_crop_top_black_back.jpg",
+            ],
+            ("Adidas", "Essentials 3-Stripes Tee"): [
+                "products/adidas_3stripes_tee_black_front.jpg",
+                "products/adidas_3stripes_tee_black_back.jpg",
+            ],
+            ("Adidas", "Originals Trefoil Tee"): [
+                "products/adidas_trefoil_tee_white_front.jpg",
+            ],
+            ("Uniqlo", "Supima Cotton Crew Neck"): [
+                "products/uniqlo_supima_crew_navy_front.jpg",
+            ],
+            ("H&M", "Oversized Graphic Print Tee"): [
+                "products/hm_oversized_graphic_tee_grey_front.jpg",
+                "products/hm_oversized_graphic_tee_grey_detail.jpg",
+            ],
+            ("Zara", "Relaxed Fit V-Neck Tee"): [
+                "products/zara_vneck_tee_olive_front.jpg",
+            ],
+            # Jackets
+            ("The North Face", "Thermoball Eco Jacket"): [
+                "products/tnf_thermoball_eco_black_front.jpg",
+                "products/tnf_thermoball_eco_black_back.jpg",
+            ],
+            ("The North Face", "Nuptse Puffer Jacket"): [
+                "products/tnf_nuptse_puffer_red_front.jpg",
+                "products/tnf_nuptse_puffer_red_side.jpg",
+            ],
+            ("Nike", "Windrunner Jacket"): [
+                "products/nike_windrunner_blue_front.jpg",
+                "products/nike_windrunner_blue_back.jpg",
+            ],
+            ("Adidas", "Essentials Down Jacket"): [
+                "products/adidas_down_jacket_green_front.jpg",
+            ],
+            ("Zara", "Faux Leather Biker Jacket"): [
+                "products/zara_biker_jacket_black_front.jpg",
+                "products/zara_biker_jacket_black_detail.jpg",
+            ],
+            ("H&M", "Denim Trucker Jacket"): [
+                "products/hm_denim_trucker_blue_front.jpg",
+            ],
+            ("Levi's", "Sherpa Trucker Jacket"): [
+                "products/levis_sherpa_trucker_indigo_front.jpg",
+                "products/levis_sherpa_trucker_indigo_back.jpg",
+            ],
+            # Pants
+            ("Levi's", "501 Original Fit Jeans"): [
+                "products/levis_501_indigo_front.jpg",
+                "products/levis_501_indigo_back.jpg",
+            ],
+            ("Levi's", "511 Slim Fit Jeans"): [
+                "products/levis_511_black_front.jpg",
+            ],
+            ("Nike", "Tech Fleece Joggers"): [
+                "products/nike_tech_fleece_joggers_grey_front.jpg",
+                "products/nike_tech_fleece_joggers_grey_side.jpg",
+            ],
+            ("Adidas", "Tiro 23 Track Pants"): [
+                "products/adidas_tiro23_black_front.jpg",
+            ],
+            ("Uniqlo", "Smart Ankle Pants"): [
+                "products/uniqlo_smart_ankle_beige_front.jpg",
+            ],
+            ("Zara", "Wide Leg Palazzo Pants"): [
+                "products/zara_palazzo_cream_front.jpg",
+                "products/zara_palazzo_cream_side.jpg",
+            ],
+            ("H&M", "Cargo Jogger Pants"): [
+                "products/hm_cargo_jogger_olive_front.jpg",
+            ],
+            # Shorts
+            ("Nike", "Dri-FIT Challenger Shorts"): [
+                "products/nike_challenger_shorts_black_front.jpg",
+            ],
+            ("Adidas", "Aeroready 3-Stripes Shorts"): [
+                "products/adidas_aeroready_shorts_navy_front.jpg",
+            ],
+            ("Puma", "Essentials Sweat Shorts"): [
+                "products/puma_sweat_shorts_grey_front.jpg",
+            ],
+            ("Uniqlo", "Chino Shorts"): [
+                "products/uniqlo_chino_shorts_beige_front.jpg",
+            ],
+            # Dresses
+            ("Zara", "Satin Midi Slip Dress"): [
+                "products/zara_satin_midi_black_front.jpg",
+                "products/zara_satin_midi_black_back.jpg",
+            ],
+            ("H&M", "Floral Wrap Dress"): [
+                "products/hm_floral_wrap_dress_red_front.jpg",
+                "products/hm_floral_wrap_dress_red_detail.jpg",
+            ],
+            ("Zara", "Ribbed Knit Bodycon Dress"): [
+                "products/zara_bodycon_dress_cream_front.jpg",
+            ],
+        }
+
+        for product in products:
+            key = (product.brand.name, product.model)
+            image_paths = apparel_images.get(key, [])
+            for order, path in enumerate(image_paths):
+                ProductImage.objects.create(
+                    product=product,
+                    image=path,
+                    is_primary=(order == 0),
+                    order=order,
+                )

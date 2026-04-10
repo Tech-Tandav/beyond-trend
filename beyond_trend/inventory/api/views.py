@@ -98,6 +98,11 @@ class BrandViewSet(BaseModelViewSet):
     search_fields = ["name"]
     ordering_fields = ["name"]
 
+    def get_permissions(self):
+        if self.action in ("list", "retrieve"):
+            return [AllowAny()]
+        return super().get_permissions()
+
 
 @extend_schema_view(
     list=extend_schema(tags=["Inventory - Categories"], summary="List categories"),
@@ -115,6 +120,11 @@ class CategoryViewSet(BaseModelViewSet):
     ordering_fields = ["name", "created_at"]
     filterset_fields = ["is_active", "is_archived"]
 
+    def get_permissions(self):
+        if self.action in ("list", "retrieve"):
+            return [AllowAny()]
+        return super().get_permissions()
+
 
 @extend_schema_view(
     list=extend_schema(tags=["Inventory - Sub Categories"], summary="List sub categories"),
@@ -131,6 +141,11 @@ class SubCategoryViewSet(BaseModelViewSet):
     search_fields = ["name", "category__name"]
     ordering_fields = ["name", "created_at"]
     filterset_fields = ["category", "is_active", "is_archived"]
+
+    def get_permissions(self):
+        if self.action in ("list", "retrieve"):
+            return [AllowAny()]
+        return super().get_permissions()
 
 
 @extend_schema(
