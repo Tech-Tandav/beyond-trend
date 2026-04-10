@@ -352,7 +352,12 @@ class InventoryLogViewSet(BaseModelViewSet):
 @extend_schema(
     tags=["Inventory - Products"],
     summary="List available sizes",
-    description="Returns a list of distinct product sizes currently in use, sorted alphabetically.",
+    description="Returns a list of distinct product sizes currently in use, sorted alphabetically. Supports filtering by category, subcategory, and brand.",
+    parameters=[
+        OpenApiParameter("category_name", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by category name (case-insensitive partial match)."),
+        OpenApiParameter("subcategory_name", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by subcategory name (case-insensitive partial match)."),
+        OpenApiParameter("brand_name", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by brand name (case-insensitive partial match)."),
+    ],
     responses={200: inline_serializer(
         name="SizeListResponse",
         fields={"sizes": serializers.ListField(child=serializers.CharField())},
@@ -362,13 +367,21 @@ class SizeListView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        sizes = (
-            Product.objects
-            .exclude(size="")
-            .values_list("size", flat=True)
-            .distinct()
-            .order_by("size")
-        )
+        qs = Product.objects.exclude(size="")
+
+        category_name = request.query_params.get("category_name")
+        if category_name:
+            qs = qs.filter(category__name__icontains=category_name)
+
+        subcategory_name = request.query_params.get("subcategory_name")
+        if subcategory_name:
+            qs = qs.filter(subcategory__name__icontains=subcategory_name)
+
+        brand_name = request.query_params.get("brand_name")
+        if brand_name:
+            qs = qs.filter(brand__name__icontains=brand_name)
+
+        sizes = qs.values_list("size", flat=True).distinct().order_by("size")
         return Response({"sizes": list(sizes)})
 
 
