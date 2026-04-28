@@ -59,7 +59,7 @@ class ProductImageInline(admin.TabularInline):
 
 @admin.register(Product)
 class ProductAdmin(ExcelExportMixin, BasePublishModelAdmin):
-    list_display = ["brand", "model", "category", "subcategory", "color", "sizes_display", "quantity", "is_published", "is_archived", "created_at"]
+    list_display = ["brand", "model", "category", "subcategory", "colors_display", "sizes_display", "quantity", "is_published", "is_archived", "created_at"]
     list_filter = ["brand", "category", "subcategory", "is_published", "is_archived"]
     search_fields = ["model", "brand__name", "category__name", "subcategory__name", "id"]
     autocomplete_fields = ["category", "subcategory", "brand", "vendor"]
@@ -70,6 +70,10 @@ class ProductAdmin(ExcelExportMixin, BasePublishModelAdmin):
     def sizes_display(self, obj):
         return ", ".join(obj.size) if obj.size else "-"
 
+    @admin.display(description="Color")
+    def colors_display(self, obj):
+        return ", ".join(obj.color) if obj.color else "-"
+
     excel_export_fields = [
         ("Product ID", "id"),
         ("Brand", "brand__name"),
@@ -77,7 +81,7 @@ class ProductAdmin(ExcelExportMixin, BasePublishModelAdmin):
         ("Sub Category", "subcategory__name"),
         ("Model", "model"),
         ("Size", "size_display"),
-        ("Color", "color"),
+        ("Color", "color_display"),
         ("Barcode", "barcode"),
         ("Vendor", "vendor__name"),
         ("Selling Price", "selling_price"),

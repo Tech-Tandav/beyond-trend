@@ -16,10 +16,13 @@ class ProductFilter(django_filters.FilterSet):
     show_in_website = django_filters.BooleanFilter()
     barcode = django_filters.CharFilter(lookup_expr="iexact")
     size = django_filters.CharFilter(method="filter_size")
-    color = django_filters.CharFilter(lookup_expr="icontains")
+    color = django_filters.CharFilter(method="filter_color")
 
     def filter_size(self, queryset, name, value):
         return queryset.filter(size__contains=[value])
+
+    def filter_color(self, queryset, name, value):
+        return queryset.filter(color__contains=[value])
 
     class Meta:
         model = Product

@@ -155,8 +155,8 @@ class SubCategoryViewSet(BaseModelViewSet):
         "Returns a paginated list of product variants. Each row represents a unique "
         "**brand + model + size + color** combination.\n\n"
         "Supports filtering via `ProductFilter`, full-text search on "
-        "`model`, `description`, `brand__name`, `barcode`, `color`, and "
-        "ordering by `model`, `created_at`, `color`."
+        "`model`, `description`, `brand__name`, `barcode`, and "
+        "ordering by `model`, `created_at`."
     ),
     parameters=[
         OpenApiParameter("brand", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by brand slug (exact match)."),
@@ -164,9 +164,9 @@ class SubCategoryViewSet(BaseModelViewSet):
         OpenApiParameter("is_published", OpenApiTypes.BOOL, OpenApiParameter.QUERY, description="Filter by published flag."),
         OpenApiParameter("barcode", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by barcode (case-insensitive exact)."),
         OpenApiParameter("size", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by size (exact element match within the size array)."),
-        OpenApiParameter("color", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by color (case-insensitive contains)."),
-        OpenApiParameter("search", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Free-text search across model, description, brand name, barcode, color."),
-        OpenApiParameter("ordering", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Order by: model, created_at, color (prefix `-` for descending)."),
+        OpenApiParameter("color", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by color (exact element match within the color array)."),
+        OpenApiParameter("search", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Free-text search across model, description, brand name, barcode."),
+        OpenApiParameter("ordering", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Order by: model, created_at (prefix `-` for descending)."),
     ],
 )
 class ProductListView(generics.ListAPIView):
@@ -174,8 +174,8 @@ class ProductListView(generics.ListAPIView):
     queryset = Product.objects.select_related("brand", "category", "subcategory").all()
     permission_classes = [AllowAny]
     filterset_class = ProductFilter
-    search_fields = ["model", "description", "brand__name", "barcode", "color"]
-    ordering_fields = ["model", "created_at", "color"]
+    search_fields = ["model", "description", "brand__name", "barcode"]
+    ordering_fields = ["model", "created_at"]
 
 
 @extend_schema(
@@ -474,7 +474,7 @@ class PublicInventoryView(APIView):
 
         color = request.query_params.get("color")
         if color:
-            qs = qs.filter(color__icontains=color)
+            qs = qs.filter(color__contains=[color])
 
         size = request.query_params.get("size")
         if size:
@@ -522,7 +522,7 @@ class PublicInventoryView(APIView):
                 vendor_name=Coalesce("vendor__name", Value("")),
             )
             .annotate(
-                colors=ArrayAgg("color", distinct=True, ordering="color"),
+                colors=ArrayAgg("color", distinct=True),
                 sizes=ArrayAgg("size", distinct=True),
                 barcodes=ArrayAgg("barcode", distinct=True, ordering="barcode"),
                 total_quantity=Coalesce(Sum("quantity"), 0),
@@ -568,7 +568,7 @@ class PublicInventoryView(APIView):
                 "subcategory_name": row["subcategory_name"],
                 "vendor_name": row["vendor_name"],
                 "model": row["model"],
-                "color": row["colors"],
+                "color": sorted({c for arr in (row["colors"] or []) if arr for c in arr if c}),
                 "size": sorted({s for arr in (row["sizes"] or []) if arr for s in arr if s}),
                 "barcode": row["barcodes"],
                 "quantity": row["total_quantity"],
@@ -612,7 +612,7 @@ class ProductExcelExportAPIView(ExcelExportAPIView):
         ("Brand", "brand__name"),
         ("Model", "model"),
         ("Size", "size_display"),
-        ("Color", "color"),
+        ("Color", "color_display"),
         ("Barcode", "barcode"),
         ("Vendor", "vendor__name"),
         ("Selling Price", "selling_price"),

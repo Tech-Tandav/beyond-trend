@@ -102,7 +102,12 @@ class Product(BaseModelWithSlug):
         default=list,
         blank=True,
     )
-    color = models.CharField(_("Color"), max_length=50)
+    color = ArrayField(
+        models.CharField(max_length=50),
+        verbose_name=_("Color"),
+        default=list,
+        blank=True,
+    )
     barcode = models.CharField(_("Barcode"), max_length=100, unique=True, blank=True)
     cost_price = models.DecimalField(_("Cost Price"), max_digits=10, decimal_places=2, null=True, blank=True)
     selling_price = models.DecimalField(_("Selling Price"), max_digits=10, decimal_places=2, null=True, blank=True)
@@ -115,7 +120,8 @@ class Product(BaseModelWithSlug):
 
     def __str__(self):
         sizes = ", ".join(self.size) if self.size else "-"
-        return f"{self.brand} {self.model} - {sizes} / {self.color}"
+        colors = ", ".join(self.color) if self.color else "-"
+        return f"{self.brand} {self.model} - {sizes} / {colors}"
 
     def save(self, *args, **kwargs):
         if not self.barcode:
@@ -125,6 +131,10 @@ class Product(BaseModelWithSlug):
     @property
     def size_display(self):
         return ", ".join(self.size) if self.size else ""
+
+    @property
+    def color_display(self):
+        return ", ".join(self.color) if self.color else ""
 
     @property
     def is_low_stock(self):
