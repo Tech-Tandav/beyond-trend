@@ -407,6 +407,7 @@ class PublicInventoryItemSerializer(serializers.ModelSerializer):
             "color",
             "size",
             "barcode",
+            "product_code",
             "quantity",
             "selling_price",
             "updated_at",

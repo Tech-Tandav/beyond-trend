@@ -103,6 +103,7 @@ class ProductSerializer(BaseModelSerializer):
             "size",
             "color",
             "barcode",
+            "product_code",
             "cost_price",
             "selling_price",
             "quantity",
@@ -112,7 +113,7 @@ class ProductSerializer(BaseModelSerializer):
             "show_in_website",
             "is_featured",
         ]
-        read_only_fields = ["id", "slug", "created_at", "is_low_stock", "is_out_of_stock"]
+        read_only_fields = ["id", "slug", "created_at", "product_code", "is_low_stock", "is_out_of_stock"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
