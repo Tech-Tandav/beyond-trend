@@ -1,6 +1,3 @@
-from django.db.models import Value
-from django.db.models.functions import Coalesce
-
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
     OpenApiExample,
@@ -10,7 +7,9 @@ from drf_spectacular.utils import (
     extend_schema_view,
     inline_serializer,
 )
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics, serializers, status
+from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -385,29 +384,110 @@ class SizeListView(APIView):
         return Response({"sizes": sizes})
 
 
-class PublicInventoryItemSerializer(serializers.Serializer):
-    slug = serializers.CharField()
-    brand_name = serializers.CharField()
-    category_name = serializers.CharField(allow_blank=True)
-    subcategory_name = serializers.CharField(allow_blank=True)
-    model = serializers.CharField()
-    color = serializers.ListField(child=serializers.CharField())
-    size = serializers.ListField(child=serializers.CharField())
-    barcode = serializers.ListField(child=serializers.CharField())
-    quantity = serializers.IntegerField()
-    image = serializers.CharField(allow_null=True)
-    images = serializers.ListField(child=serializers.CharField())
+class PublicInventoryItemSerializer(serializers.ModelSerializer):
+    brand_name = serializers.SerializerMethodField()
+    category_name = serializers.SerializerMethodField()
+    subcategory_name = serializers.SerializerMethodField()
+    vendor_name = serializers.SerializerMethodField()
+    barcode = serializers.SerializerMethodField()
+    color = serializers.SerializerMethodField()
+    size = serializers.SerializerMethodField()
+    image = serializers.SerializerMethodField()
+    images = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Product
+        fields = [
+            "slug",
+            "brand_name",
+            "category_name",
+            "subcategory_name",
+            "vendor_name",
+            "model",
+            "color",
+            "size",
+            "barcode",
+            "quantity",
+            "selling_price",
+            "updated_at",
+            "image",
+            "images",
+        ]
+
+    def get_brand_name(self, obj):
+        return obj.brand.name if obj.brand_id else ""
+
+    def get_category_name(self, obj):
+        return obj.category.name if obj.category_id else ""
+
+    def get_subcategory_name(self, obj):
+        return obj.subcategory.name if obj.subcategory_id else ""
+
+    def get_vendor_name(self, obj):
+        return obj.vendor.name if obj.vendor_id else ""
+
+    def get_barcode(self, obj):
+        return [obj.barcode] if obj.barcode else []
+
+    def get_color(self, obj):
+        return obj.color or []
+
+    def get_size(self, obj):
+        return obj.size or []
+
+    def _absolute_image_url(self, image_field):
+        if not image_field:
+            return None
+        try:
+            url = image_field.url
+        except (ValueError, AttributeError):
+            return None
+        request = self.context.get("request")
+        return request.build_absolute_uri(url) if request else url
+
+    def get_image(self, obj):
+        # `images` is prefetched and ProductImage.Meta.ordering puts the primary first.
+        first = next(iter(obj.images.all()), None)
+        return self._absolute_image_url(first.image) if first else None
+
+    def get_images(self, obj):
+        return [
+            url
+            for url in (self._absolute_image_url(img.image) for img in obj.images.all())
+            if url
+        ]
+
+
+class PublicInventoryOrderingFilter(OrderingFilter):
+    """OrderingFilter that maps friendly aliases to model field paths."""
+
+    alias_map = {
+        "brand_name": "brand__name",
+        "category_name": "category__name",
+        "subcategory_name": "subcategory__name",
+    }
+
+    def get_ordering(self, request, queryset, view):
+        ordering = super().get_ordering(request, queryset, view)
+        if not ordering:
+            return ordering
+        return [self._resolve(field) for field in ordering]
+
+    def _resolve(self, field):
+        prefix = "-" if field.startswith("-") else ""
+        name = field.lstrip("-")
+        return prefix + self.alias_map.get(name, name)
 
 
 @extend_schema(
     tags=["Inventory - Public"],
     summary="Public catalog (grouped by brand + model)",
     description=(
-        "Public, unauthenticated endpoint. Aggregates published variants by `brand + model` "
-        "and returns the available colors, sizes, and total quantity in stock. Used by the "
+        "Public, unauthenticated endpoint. Returns published product variants with "
+        "available colors, sizes, total quantity, and selling price. Used by the "
         "storefront to render product cards.\n\n"
-        "Supports filtering by category, subcategory, brand (by slug), color, size, "
-        "and free-text search."
+        "Supports filtering via `ProductFilter` (category, subcategory, brand by slug "
+        "or name, color, size, etc.) and free-text search."
     ),
     parameters=[
         OpenApiParameter("category", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by category slug."),
@@ -416,167 +496,44 @@ class PublicInventoryItemSerializer(serializers.Serializer):
         OpenApiParameter("subcategory_name", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by subcategory name (case-insensitive partial match)."),
         OpenApiParameter("brand", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by brand slug."),
         OpenApiParameter("brand_name", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by brand name (case-insensitive partial match)."),
-        OpenApiParameter("color", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by color (case-insensitive partial match)."),
-        OpenApiParameter("size", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by size (exact match)."),
+        OpenApiParameter("color", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by color (exact element match within the color array)."),
+        OpenApiParameter("size", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by size (exact element match within the size array)."),
         OpenApiParameter("is_featured", OpenApiTypes.BOOL, OpenApiParameter.QUERY, description="Filter by featured flag."),
         OpenApiParameter("show_in_website", OpenApiTypes.BOOL, OpenApiParameter.QUERY, description="Filter by show in website flag."),
         OpenApiParameter("search", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Search across model, brand name, description."),
-        OpenApiParameter("ordering", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Order by: created_at, -created_at, updated_at, -updated_at, model, -model, brand_name, -brand_name, category_name, -category_name."),
+        OpenApiParameter("ordering", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Order by: created_at, updated_at, model, brand_name, category_name, subcategory_name (prefix `-` for descending)."),
     ],
     responses={200: PublicInventoryItemSerializer(many=True)},
 )
-class PublicInventoryView(APIView):
+class PublicInventoryView(generics.ListAPIView):
     """
     GET /api/v1/inventory/public/
 
-    Public endpoint returning accumulated inventory grouped by brand + model.
+    Public endpoint returning published product variants with selling price.
     """
 
+    serializer_class = PublicInventoryItemSerializer
     permission_classes = [AllowAny]
     pagination_class = CustomPagination
+    filterset_class = ProductFilter
+    filter_backends = [DjangoFilterBackend, SearchFilter, PublicInventoryOrderingFilter]
+    search_fields = ["model", "brand__name", "description"]
+    ordering_fields = [
+        "created_at",
+        "updated_at",
+        "model",
+        "brand_name",
+        "category_name",
+        "subcategory_name",
+    ]
+    ordering = ["category__name", "subcategory__name", "brand__name", "model"]
 
-    def get(self, request):
-        from django.db.models import OuterRef, Subquery
-
-        from beyond_trend.inventory.models import ProductImage
-
-        primary_image = ProductImage.objects.filter(
-            product=OuterRef("pk"),
-        ).order_by("-is_primary", "order", "created_at").values("image")[:1]
-
-        qs = Product.objects.filter(is_published=True)
-
-        # Apply filters from query params
-        category = request.query_params.get("category")
-        if category:
-            qs = qs.filter(category__slug=category)
-
-        category_name = request.query_params.get("category_name")
-        if category_name:
-            qs = qs.filter(category__name__icontains=category_name)
-
-        subcategory = request.query_params.get("subcategory")
-        if subcategory:
-            qs = qs.filter(subcategory__slug=subcategory)
-
-        subcategory_name = request.query_params.get("subcategory_name")
-        if subcategory_name:
-            qs = qs.filter(subcategory__name__icontains=subcategory_name)
-
-        brand = request.query_params.get("brand")
-        if brand:
-            qs = qs.filter(brand__slug=brand)
-
-        brand_name = request.query_params.get("brand_name")
-        if brand_name:
-            qs = qs.filter(brand__name__icontains=brand_name)
-
-        color = request.query_params.get("color")
-        if color:
-            qs = qs.filter(color__contains=[color])
-
-        size = request.query_params.get("size")
-        if size:
-            qs = qs.filter(size__contains=[size])
-
-        is_featured = request.query_params.get("is_featured")
-        if is_featured is not None:
-            qs = qs.filter(is_featured=is_featured.lower() in ("true", "1"))
-
-        show_in_website = request.query_params.get("show_in_website")
-        if show_in_website is not None:
-            qs = qs.filter(show_in_website=show_in_website.lower() in ("true", "1"))
-
-        search = request.query_params.get("search")
-        if search:
-            from django.db.models import Q
-            qs = qs.filter(
-                Q(model__icontains=search)
-                | Q(brand__name__icontains=search)
-                | Q(description__icontains=search)
-            )
-
-        # Ordering
-        ALLOWED_ORDERING = {
-            "created_at", "-created_at",
-            "updated_at", "-updated_at",
-            "model", "-model",
-            "brand_name", "-brand_name",
-            "category_name", "-category_name",
-        }
-        ordering_param = request.query_params.get("ordering")
-
-        rows = (
-            qs
-            .annotate(primary_image=Subquery(primary_image))
-            .values(
-                "pk",
-                "slug",
-                "model",
-                "size",
-                "color",
-                "barcode",
-                "quantity",
-                "updated_at",
-                "primary_image",
-                brand_name=Coalesce("brand__name", Value("")),
-                category_name=Coalesce("category__name", Value("")),
-                subcategory_name=Coalesce("subcategory__name", Value("")),
-                vendor_name=Coalesce("vendor__name", Value("")),
-            )
+    def get_queryset(self):
+        return (
+            Product.objects.filter(is_published=True)
+            .select_related("brand", "category", "subcategory", "vendor")
+            .prefetch_related("images")
         )
-
-        if ordering_param and ordering_param in ALLOWED_ORDERING:
-            rows = rows.order_by(ordering_param)
-        else:
-            rows = rows.order_by("category_name", "subcategory_name", "brand_name", "model")
-
-        paginator = self.pagination_class()
-        page = paginator.paginate_queryset(rows, request, view=self)
-
-        from django.conf import settings as dj_settings
-
-        def build_image_url(image_path):
-            if not image_path:
-                return None
-            if image_path.startswith(("http://", "https://")):
-                return request.build_absolute_uri(image_path)
-            media_url = dj_settings.MEDIA_URL or "/media/"
-            if not media_url.endswith("/"):
-                media_url += "/"
-            return request.build_absolute_uri(f"{media_url}{image_path.lstrip('/')}")
-
-        product_pks = [row["pk"] for row in page]
-        images_by_product: dict[int, list[str]] = {}
-        for img in (
-            ProductImage.objects.filter(product_id__in=product_pks)
-            .order_by("product_id", "-is_primary", "order", "created_at")
-            .values("product_id", "image")
-        ):
-            url = build_image_url(img["image"])
-            if url:
-                images_by_product.setdefault(img["product_id"], []).append(url)
-
-        result = [
-            {
-                "slug": row["slug"],
-                "brand_name": row["brand_name"],
-                "category_name": row["category_name"],
-                "subcategory_name": row["subcategory_name"],
-                "vendor_name": row["vendor_name"],
-                "model": row["model"],
-                "color": row["color"] or [],
-                "size": row["size"] or [],
-                "barcode": [row["barcode"]] if row["barcode"] else [],
-                "quantity": row["quantity"] or 0,
-                "updated_at": row["updated_at"],
-                "image": build_image_url(row.get("primary_image")),
-                "images": images_by_product.get(row["pk"], []),
-            }
-            for row in page
-        ]
-
-        return paginator.get_paginated_response(result)
 
 
 @extend_schema(
