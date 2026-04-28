@@ -10,6 +10,7 @@ from beyond_trend.loyalty.models import Customer, LoyaltyTransaction, LOYALTY_EL
 from beyond_trend.loyalty.api.filters import CustomerFilter, LoyaltyTransactionFilter
 from beyond_trend.loyalty.api.serializers import (
     CustomerLookupSerializer,
+    CustomerLoyaltySerializer,
     CustomerSerializer,
     EarnPointsSerializer,
     LoyaltyTransactionSerializer,
@@ -61,6 +62,24 @@ class CustomerViewSet(BaseModelViewSet):
         return Response(
             CustomerSerializer(customer, context=self.get_serializer_context()).data
         )
+
+    @extend_schema(
+        tags=["Loyalty"],
+        summary="Get customer loyalty summary",
+        description=(
+            "Returns the customer's loyalty status: total points, "
+            "discount eligibility, points remaining to the next discount, "
+            "and the 5 most recent loyalty transactions."
+        ),
+        responses={200: CustomerLoyaltySerializer},
+    )
+    @action(detail=True, methods=["get"], url_path="loyalty")
+    def loyalty(self, request, pk=None):
+        customer = self.get_object()
+        serializer = CustomerLoyaltySerializer(
+            customer, context=self.get_serializer_context()
+        )
+        return Response(serializer.data)
 
     @extend_schema(
         tags=["Loyalty"],

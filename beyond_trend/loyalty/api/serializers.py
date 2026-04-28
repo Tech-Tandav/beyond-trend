@@ -1,7 +1,11 @@
 from rest_framework import serializers
 
 from beyond_trend.core.serializers import BaseModelSerializer
-from beyond_trend.loyalty.models import Customer, LoyaltyTransaction
+from beyond_trend.loyalty.models import (
+    Customer,
+    DISCOUNT_THRESHOLD,
+    LoyaltyTransaction,
+)
 
 
 class CustomerSerializer(BaseModelSerializer):
@@ -51,3 +55,31 @@ class EarnPointsSerializer(serializers.Serializer):
 
 class CustomerLookupSerializer(serializers.Serializer):
     phone = serializers.CharField(max_length=20)
+
+
+class CustomerLoyaltySerializer(serializers.ModelSerializer):
+    is_discount_eligible = serializers.BooleanField(read_only=True)
+    points_to_next_discount = serializers.SerializerMethodField()
+    recent_transactions = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Customer
+        fields = [
+            "id",
+            "name",
+            "phone",
+            "email",
+            "total_points",
+            "is_discount_eligible",
+            "points_to_next_discount",
+            "recent_transactions",
+        ]
+
+    def get_points_to_next_discount(self, obj):
+        return max(DISCOUNT_THRESHOLD - obj.total_points, 0)
+
+    def get_recent_transactions(self, obj):
+        transactions = obj.transactions.all()[:5]
+        return LoyaltyTransactionSerializer(
+            transactions, many=True, context=self.context
+        ).data
