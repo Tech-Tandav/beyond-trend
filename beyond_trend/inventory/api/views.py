@@ -1,4 +1,4 @@
-from django.db.models import Sum, Value
+from django.db.models import Value
 from django.db.models.functions import Coalesce
 
 from drf_spectacular.types import OpenApiTypes
@@ -436,7 +436,6 @@ class PublicInventoryView(APIView):
     pagination_class = CustomPagination
 
     def get(self, request):
-        from django.contrib.postgres.aggregates import ArrayAgg
         from django.db.models import OuterRef, Subquery
 
         from beyond_trend.inventory.models import ProductImage
@@ -514,18 +513,16 @@ class PublicInventoryView(APIView):
                 "pk",
                 "slug",
                 "model",
+                "size",
+                "color",
+                "barcode",
+                "quantity",
                 "updated_at",
                 "primary_image",
                 brand_name=Coalesce("brand__name", Value("")),
                 category_name=Coalesce("category__name", Value("")),
                 subcategory_name=Coalesce("subcategory__name", Value("")),
                 vendor_name=Coalesce("vendor__name", Value("")),
-            )
-            .annotate(
-                colors=ArrayAgg("color", distinct=True),
-                sizes=ArrayAgg("size", distinct=True),
-                barcodes=ArrayAgg("barcode", distinct=True, ordering="barcode"),
-                total_quantity=Coalesce(Sum("quantity"), 0),
             )
         )
 
@@ -568,10 +565,10 @@ class PublicInventoryView(APIView):
                 "subcategory_name": row["subcategory_name"],
                 "vendor_name": row["vendor_name"],
                 "model": row["model"],
-                "color": sorted({c for arr in (row["colors"] or []) if arr for c in arr if c}),
-                "size": sorted({s for arr in (row["sizes"] or []) if arr for s in arr if s}),
-                "barcode": row["barcodes"],
-                "quantity": row["total_quantity"],
+                "color": row["color"] or [],
+                "size": row["size"] or [],
+                "barcode": [row["barcode"]] if row["barcode"] else [],
+                "quantity": row["quantity"] or 0,
                 "updated_at": row["updated_at"],
                 "image": build_image_url(row.get("primary_image")),
                 "images": images_by_product.get(row["pk"], []),

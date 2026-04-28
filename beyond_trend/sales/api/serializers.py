@@ -1,16 +1,24 @@
 from rest_framework import serializers
 
 from beyond_trend.core.serializers import BaseModelSerializer
+from beyond_trend.inventory.api.serializers import ProductSerializer
+from beyond_trend.inventory.models import Product
 
 from ..models import Sale, SaleItem
 
 
 class SaleItemSerializer(BaseModelSerializer):
+    product = ProductSerializer(read_only=True)
+    product_id = serializers.PrimaryKeyRelatedField(
+        queryset=Product.objects.all(),
+        source="product",
+        write_only=True,
+    )
     total = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
 
     class Meta(BaseModelSerializer.Meta):
         model = SaleItem
-        fields = ["id", "product", "quantity", "selling_price", "total"]
+        fields = ["id", "product", "product_id", "quantity", "selling_price", "total"]
         read_only_fields = ["id", "total"]
 
 
