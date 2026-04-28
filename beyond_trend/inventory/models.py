@@ -1,6 +1,7 @@
 import uuid
 
 from django.conf import settings
+from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -95,7 +96,12 @@ class Product(BaseModelWithSlug):
     is_published = models.BooleanField(_("Published"), default=True)
     is_featured = models.BooleanField(_("Featured"), default=False)
     show_in_website = models.BooleanField(_("Show in Website"), default=True)
-    size = models.CharField(_("Size"), max_length=20)
+    size = ArrayField(
+        models.CharField(max_length=20),
+        verbose_name=_("Size"),
+        default=list,
+        blank=True,
+    )
     color = models.CharField(_("Color"), max_length=50)
     barcode = models.CharField(_("Barcode"), max_length=100, unique=True, blank=True)
     cost_price = models.DecimalField(_("Cost Price"), max_digits=10, decimal_places=2, null=True, blank=True)
@@ -108,12 +114,17 @@ class Product(BaseModelWithSlug):
     #     ordering = ["brand", "model", "size", "color"]
 
     def __str__(self):
-        return f"{self.brand} {self.model} - {self.size} / {self.color}"
+        sizes = ", ".join(self.size) if self.size else "-"
+        return f"{self.brand} {self.model} - {sizes} / {self.color}"
 
     def save(self, *args, **kwargs):
         if not self.barcode:
             self.barcode = uuid.uuid4().hex[:12].upper()
         super().save(*args, **kwargs)
+
+    @property
+    def size_display(self):
+        return ", ".join(self.size) if self.size else ""
 
     @property
     def is_low_stock(self):

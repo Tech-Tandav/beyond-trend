@@ -155,18 +155,18 @@ class SubCategoryViewSet(BaseModelViewSet):
         "Returns a paginated list of product variants. Each row represents a unique "
         "**brand + model + size + color** combination.\n\n"
         "Supports filtering via `ProductFilter`, full-text search on "
-        "`model`, `description`, `brand__name`, `barcode`, `size`, `color`, and "
-        "ordering by `model`, `created_at`, `size`, `color`."
+        "`model`, `description`, `brand__name`, `barcode`, `color`, and "
+        "ordering by `model`, `created_at`, `color`."
     ),
     parameters=[
         OpenApiParameter("brand", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by brand slug (exact match)."),
         OpenApiParameter("model", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by model name (case-insensitive contains)."),
         OpenApiParameter("is_published", OpenApiTypes.BOOL, OpenApiParameter.QUERY, description="Filter by published flag."),
         OpenApiParameter("barcode", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by barcode (case-insensitive exact)."),
-        OpenApiParameter("size", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by size (case-insensitive exact)."),
+        OpenApiParameter("size", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by size (exact element match within the size array)."),
         OpenApiParameter("color", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by color (case-insensitive contains)."),
-        OpenApiParameter("search", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Free-text search across model, description, brand name, barcode, size, color."),
-        OpenApiParameter("ordering", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Order by: model, created_at, size, color (prefix `-` for descending)."),
+        OpenApiParameter("search", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Free-text search across model, description, brand name, barcode, color."),
+        OpenApiParameter("ordering", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Order by: model, created_at, color (prefix `-` for descending)."),
     ],
 )
 class ProductListView(generics.ListAPIView):
@@ -174,8 +174,8 @@ class ProductListView(generics.ListAPIView):
     queryset = Product.objects.select_related("brand", "category", "subcategory").all()
     permission_classes = [AllowAny]
     filterset_class = ProductFilter
-    search_fields = ["model", "description", "brand__name", "barcode", "size", "color"]
-    ordering_fields = ["model", "created_at", "size", "color"]
+    search_fields = ["model", "description", "brand__name", "barcode", "color"]
+    ordering_fields = ["model", "created_at", "color"]
 
 
 @extend_schema(
@@ -367,7 +367,7 @@ class SizeListView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        qs = Product.objects.exclude(size="")
+        qs = Product.objects.exclude(size=[])
 
         category_name = request.query_params.get("category_name")
         if category_name:
@@ -381,8 +381,8 @@ class SizeListView(APIView):
         if brand_name:
             qs = qs.filter(brand__name__icontains=brand_name)
 
-        sizes = qs.values_list("size", flat=True).distinct().order_by("size")
-        return Response({"sizes": list(sizes)})
+        sizes = sorted({s for row in qs.values_list("size", flat=True) for s in row if s})
+        return Response({"sizes": sizes})
 
 
 class PublicInventoryItemSerializer(serializers.Serializer):
@@ -478,7 +478,7 @@ class PublicInventoryView(APIView):
 
         size = request.query_params.get("size")
         if size:
-            qs = qs.filter(size__iexact=size)
+            qs = qs.filter(size__contains=[size])
 
         is_featured = request.query_params.get("is_featured")
         if is_featured is not None:
@@ -523,7 +523,7 @@ class PublicInventoryView(APIView):
             )
             .annotate(
                 colors=ArrayAgg("color", distinct=True, ordering="color"),
-                sizes=ArrayAgg("size", distinct=True, ordering="size"),
+                sizes=ArrayAgg("size", distinct=True),
                 barcodes=ArrayAgg("barcode", distinct=True, ordering="barcode"),
                 total_quantity=Coalesce(Sum("quantity"), 0),
             )
@@ -569,7 +569,7 @@ class PublicInventoryView(APIView):
                 "vendor_name": row["vendor_name"],
                 "model": row["model"],
                 "color": row["colors"],
-                "size": row["sizes"],
+                "size": sorted({s for arr in (row["sizes"] or []) if arr for s in arr if s}),
                 "barcode": row["barcodes"],
                 "quantity": row["total_quantity"],
                 "updated_at": row["updated_at"],
@@ -611,7 +611,7 @@ class ProductExcelExportAPIView(ExcelExportAPIView):
         ("Product ID", "id"),
         ("Brand", "brand__name"),
         ("Model", "model"),
-        ("Size", "size"),
+        ("Size", "size_display"),
         ("Color", "color"),
         ("Barcode", "barcode"),
         ("Vendor", "vendor__name"),
