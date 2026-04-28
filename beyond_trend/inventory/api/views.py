@@ -530,7 +530,7 @@ class PublicInventoryView(generics.ListAPIView):
 
     def get_queryset(self):
         return (
-            Product.objects.filter(is_published=True)
+            Product.objects.filter(is_published=True, show_in_website=True)
             .select_related("brand", "category", "subcategory", "vendor")
             .prefetch_related("images")
         )

@@ -61,6 +61,7 @@ class CheckoutSerializer(serializers.Serializer):
     """
     items = CheckoutItemSerializer(many=True, required=False)
     order_id = serializers.UUIDField(required=False, allow_null=True)
+    customer_id = serializers.UUIDField(required=False, allow_null=True)
     notes = serializers.CharField(required=False, allow_blank=True, default="")
 
     def validate(self, attrs):

@@ -108,6 +108,7 @@ class Product(BaseModelWithSlug):
         default=list,
         blank=True,
     )
+    product_code = models.CharField(_("Product Code"), max_length=50, unique=True, blank=True)
     barcode = models.CharField(_("Barcode"), max_length=100, unique=True, blank=True)
     cost_price = models.DecimalField(_("Cost Price"), max_digits=10, decimal_places=2, null=True, blank=True)
     selling_price = models.DecimalField(_("Selling Price"), max_digits=10, decimal_places=2, null=True, blank=True)
@@ -124,6 +125,8 @@ class Product(BaseModelWithSlug):
         return f"{self.brand} {self.model} - {sizes} / {colors}"
 
     def save(self, *args, **kwargs):
+        if not self.product_code:
+            self.product_code = uuid.uuid4().hex[:10].upper()
         if not self.barcode:
             self.barcode = uuid.uuid4().hex[:12].upper()
         super().save(*args, **kwargs)

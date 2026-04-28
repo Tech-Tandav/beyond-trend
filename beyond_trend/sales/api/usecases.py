@@ -1,9 +1,16 @@
+from decimal import Decimal
+
 from django.db import transaction
 
 from rest_framework.exceptions import NotFound, ValidationError
 
 from beyond_trend.core.usecases import BaseUseCase
 from beyond_trend.inventory.models import InventoryLog, Product
+from beyond_trend.loyalty.models import (
+    LOYALTY_ELIGIBLE_SUBCATEGORY_SLUG,
+    Customer,
+    LoyaltyTransaction,
+)
 from beyond_trend.orders.models import Order
 
 from beyond_trend.sales.models import Sale, SaleItem
@@ -16,15 +23,21 @@ class CheckoutUseCase(BaseUseCase):
         self._order = None
         self._items = []  # normalized list of {"product": Product, "quantity": int, "selling_price": Decimal}
         self._products = {}
-        self._subtotal = 0
-        self._discount_amount = 0
-        self._total_amount = 0
+        self._subtotal = Decimal("0")
+        self._discount_amount = Decimal("0")
+        self._total_amount = Decimal("0")
+        self._customer = None
+        self._loyalty_eligible = False
+        self._loyalty_points_earned = 0
+        self._loyalty_discount_percent = Decimal("0")
 
     def is_valid(self):
         order_id = self._data.get("order_id")
         if order_id:
             try:
-                self._order = Order.objects.prefetch_related("items__product").get(id=order_id)
+                self._order = Order.objects.prefetch_related(
+                    "items__product__subcategory"
+                ).get(id=order_id)
             except Order.DoesNotExist:
                 raise NotFound(f"Order {order_id} not found.")
             if self._order.status in (Order.DELIVERED, Order.CANCELLED):
@@ -71,8 +84,22 @@ class CheckoutUseCase(BaseUseCase):
                     "selling_price": item.get("selling_price", product.selling_price),
                 })
 
+        customer_id = self._data.get("customer_id")
+        if customer_id:
+            try:
+                self._customer = Customer.objects.get(id=customer_id)
+            except Customer.DoesNotExist:
+                raise NotFound(f"Customer {customer_id} not found.")
+
+        self._loyalty_eligible = any(
+            getattr(item["product"].subcategory, "slug", None)
+            == LOYALTY_ELIGIBLE_SUBCATEGORY_SLUG
+            for item in self._items
+        )
+
         self._subtotal = sum(
-            item["quantity"] * item["selling_price"] for item in self._items
+            (item["quantity"] * item["selling_price"] for item in self._items),
+            Decimal("0"),
         )
         self._total_amount = self._subtotal - self._discount_amount
 
@@ -82,6 +109,22 @@ class CheckoutUseCase(BaseUseCase):
         return self._factory()
 
     def _factory(self):
+        if self._loyalty_eligible and self._customer is not None:
+            locked_customer = Customer.objects.select_for_update().get(
+                pk=self._customer.pk
+            )
+            points_earned, discount_percent = locked_customer.earn_points()
+            self._customer = locked_customer
+            self._loyalty_points_earned = points_earned
+            self._loyalty_discount_percent = discount_percent
+
+            if discount_percent > 0:
+                loyalty_discount = (
+                    self._subtotal * discount_percent / Decimal("100")
+                ).quantize(Decimal("0.01"))
+                self._discount_amount += loyalty_discount
+                self._total_amount = self._subtotal - self._discount_amount
+
         sale = Sale.objects.create(
             staff=self._staff,
             subtotal=self._subtotal,
@@ -89,6 +132,17 @@ class CheckoutUseCase(BaseUseCase):
             total_amount=self._total_amount,
             notes=self._data.get("notes", ""),
         )
+
+        if self._loyalty_eligible and self._customer is not None:
+            LoyaltyTransaction.objects.create(
+                customer=self._customer,
+                transaction_type=LoyaltyTransaction.EARN,
+                points=self._loyalty_points_earned,
+                discount_applied=self._loyalty_discount_percent,
+                sale=sale,
+                staff=self._staff,
+                notes="Auto-earned at checkout",
+            )
 
         for item in self._items:
             product = item["product"]
