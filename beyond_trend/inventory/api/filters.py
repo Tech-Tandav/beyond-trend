@@ -19,10 +19,12 @@ class ProductFilter(django_filters.FilterSet):
     color = django_filters.CharFilter(method="filter_color")
 
     def filter_size(self, queryset, name, value):
-        return queryset.filter(size__contains=[value])
+        sizes = self.request.GET.getlist("size") if self.request else [value]
+        return queryset.filter(size__overlap=sizes) if sizes else queryset
 
     def filter_color(self, queryset, name, value):
-        return queryset.filter(color__contains=[value])
+        colors = self.request.GET.getlist("color") if self.request else [value]
+        return queryset.filter(color__overlap=colors) if colors else queryset
 
     class Meta:
         model = Product
